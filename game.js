@@ -1014,7 +1014,8 @@ function startDialog(i){
  if(act===3)branch=save.flags.readLetter?'Du kennst Spiegel-Momos Trauer und kannst mit ihr sprechen.':'Du hast den Brief nicht gelesen. Die Schattenkatze bleibt rätselhaft, aber ein Pilz könnte Frieden stiften.';
  dialog({tag:'AKT '+(act+1)+' · '+arc.title,title:arc.place,portrait:arc.portrait,body:arc.beat+' '+branch+' '+mystery().clue,options:[{label:'🐾 Der Spur folgen!',action:resume}]});
 }
-function checkEndOfLevel(){if(phase!=='playing')return;if(isFinal(save.level)){if(!boss.done){toast('Ein magischer Spiegel versperrt den Ausgang!');player.x=Math.min(player.x,level.width-230);return}endChoice();return}
+function checkEndOfLevel(){if(phase!=='playing')return;
+ if(level.realm?.id==='race'&&level.realm.raceX>=level.width-118){loseLife('🏁 Dein Renngegner hat gewonnen!');level.realm.raceX=80;level.realm.raceClock=0;return}if(isFinal(save.level)){if(!boss.done){toast('Ein magischer Spiegel versperrt den Ausgang!');player.x=Math.min(player.x,level.width-230);return}endChoice();return}
  const i=save.level;
  if(i%5!==4){nextChapter('Neue Strecke, neue Abenteuer! 🐱');return}
  if(i===4){dialog({tag:'PLOT TWIST · KAPITEL 1',title:'Die Geisel und die Karte',portrait:'🐈 🫧 🗺️',body:'Nox’ Wachkatzen haben Miso in einer Seifenblase gefangen. Gleichzeitig flattert eine Karte zu den sieben Zeitglocken davon. Pip ruft: »Hol die Karte!« Wen willst du retten?',options:[
@@ -1240,9 +1241,187 @@ function drawMount(m){
  if(player?.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
-function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();tickCompanion(dt);if(phase!=='playing')return;tickChallenges(dt);
+
+function biomeSplash(kind,x,y,amount=10){burst(x,y,({castle:'#bfa7ef',snow:'#ecfbff',jungle:'#b4e2a4',race:'#ffd7a1',moon:'#dbc7ff',sea:'#8ee8e8',mountain:'#d8deee'})[kind],amount)}
+function closeToRealm(o,x=player.x+player.w/2,y=player.y+player.h*.6,rx=52,ry=72){
+ return Math.abs(x-o.x)<rx&&Math.abs(y-o.y)<ry;
+}
+function spawnBiomeEnemy(type,x,y){
+ if(level.enemies.length>160)return;
+ const t=ENEMY_TYPES[type];const hp=Math.max(1,Math.ceil(t.hp*diff().enemyHp));
+ const e={id:'spawn-'+type+'-'+Math.floor(clock*1000)+'-'+Math.floor(x),type,name:t.name,base:x,x,y,baseY:y,route:'biome',hp,maxHp:hp,dead:false,seed:clock*4,range:t.range*.65,inv:0,attackTimer:2,alert:0};
+ level.enemies.push(e);return e;
+}
+function snowWaterAt(x){
+ return level.realm.id==='snow'&&(level.gaps.some(([a,b])=>x>a-12&&x<b+12)||level.realm.events.some(e=>e.kind==='thinIce'&&e.broken>0&&Math.abs(x-e.x)<75));
+}
+function inSeaWater(){
+ return level.realm?.id==='sea'&&player.x>445&&player.y>310&&!inAtlantis();
+}
+function inAtlantis(){
+ return level.realm?.id==='sea'&&player.x>Math.min(level.width-900,1850)&&player.x<Math.min(level.width-265,2700)&&player.y>675&&player.y<1030;
+}
+function processVine(dt){
+ const R=level.realm;if(R?.id!=='jungle')return false;
+ if(!R.vine){
+  if(vxInput.jump&&!player.grounded&&player.vy<=180&&!player.route){
+   const v=R.events.find(o=>o.kind==='vine'&&Math.abs(player.x+20-o.x)<68&&player.y>80&&player.y<410);
+   if(v){R.vine=v;v.angle=clamp((player.x+20-v.x)/v.length,-.55,.55);v.angularVelocity=0;player.vy=0;player.vx=0;toast('🌿 FESTHALTEN! ◀ ▶ schwingen · SPRUNG loslassen zum Abspringen');sound('choice')}
+  }
+  return false;
+ }
+ const v=R.vine,torque=(Number(vxInput.right)-Number(vxInput.left));
+ v.angularVelocity+=(-Math.sin(v.angle)*4.3+torque*4.8)*dt;
+ v.angularVelocity*=Math.exp(-.33*dt);
+ v.angle=clamp(v.angle+v.angularVelocity*dt,-1.27,1.27);
+ player.x=clamp(v.x+Math.sin(v.angle)*v.length-player.w/2,0,level.width-player.w);
+ player.y=135+Math.cos(v.angle)*v.length-player.h*.5;
+ player.vx=0;player.vy=0;player.grounded=false;player.inv=Math.max(player.inv,.12);
+ if(!vxInput.jump){
+  const launch=v.angularVelocity*v.length*Math.cos(v.angle)*1.34;
+  player.vx=clamp(launch,-680,680);
+  player.vy=-420-Math.min(240,Math.abs(launch)*.25);
+  player.x+=Math.sign(player.vx)*14;
+  R.vine=null;player.inv=.3;sound('jump');toast('🌴 JAAA! Lianenschwung!');return false;
+ }
+ cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*5);
+ camY+=(clamp(player.y-300,-850,865)-camY)*Math.min(1,dt*6);
+ return true;
+}
+function tickRealmBefore(dt){
+ const R=level.realm;if(!R)return;
+ R.weather+=dt;
+ if(R.id==='snow'){
+  const storm=Math.sin(clock*.72+save.level*.6);R.wind=(.5+storm*.5)*70;
+  if(snowWaterAt(player.x+20)&&player.y>350){
+   R.cold=Math.max(0,R.cold-dt*(diff().name==='Ultra'?1.5:1));
+   if(R.cold<=0){R.cold=8;hurt();toast('🥶 ZU KALT! Schnell aus dem Eiswasser!')}
+  }else R.cold=Math.min(8,R.cold+dt*2);
+ }else if(R.id==='race'){
+  R.raceClock+=dt;
+  R.raceX=Math.min(level.width-115,R.raceX+(175+save.level%3*18+Math.sin(clock*1.9)*25)*dt);
+  if(R.raceX>=level.width-116&&!R.raceLost){
+    R.raceLost=true;
+    if(player.x<level.width-175){loseLife('🏁 Der Rennrivale war zuerst im Ziel!');R.raceX=80;R.raceClock=0;R.raceLost=false;toast('🏎️ Neustart! Überhole den Turbo-Rivalen!')}
+  }
+ }else if(R.id==='sea'){
+  // The submarine follows on a deliberately slower course, making tether range meaningful.
+  R.subX+=clamp(player.x-R.subX,-85*dt,85*dt);
+  R.subY+=clamp(player.y+105-R.subY,-44*dt,44*dt);
+  const distance=Math.hypot(player.x-R.subX,player.y-R.subY);
+  if(inSeaWater()){
+   R.oxygen=distance<390?Math.min(22,R.oxygen+dt*4):Math.max(0,R.oxygen-dt*(1.4+(distance-390)/250));
+   if(R.oxygen<=0){R.oxygen=7;hurt();toast('🫧 LUFT AUS! Zurück zum U-Boot und Luftschlauch!')}
+  }else R.oxygen=Math.min(22,R.oxygen+dt*5);
+ }
+ // Hazards have different state machines per world, not generic repeated props.
+ for(const o of R.events){
+  o.timer+=dt;
+  const near=Math.abs(player.x-o.x)<390;
+  if(o.kind==='door'&&near){
+   const opening=Math.sin(clock*1.5+o.phase)>.25;
+   if(opening&&!o.opened){o.opened=true;spawnBiomeEnemy('ghost',o.x+40,386);biomeSplash('castle',o.x,400,10);sound('choice')}
+   if(!opening)o.opened=false;
+   o.state=opening?'open':'closed';
+  }
+  if(o.kind==='painting'&&near&&!o.fallen&&Math.abs(player.x-o.x)<110){o.fallen=true;o.fall=0;sound('break')}
+  if(o.kind==='painting'&&o.fallen){o.fall=Math.min(1.2,(o.fall||0)+dt*2.5);
+   if(o.fall>.35&&o.fall<.86&&closeToRealm(o,player.x+20,player.y+30,57,105))hurt();
+   if(o.fall>=1.2){o.timer=0;o.fallen=false}
+  }
+  if(o.kind==='vampire'&&!o.dropped&&near&&Math.abs(player.x-o.x)<140){
+   o.dropped=true;spawnBiomeEnemy('vampire',o.x,185);sound('enemy');
+  }
+  if(o.kind==='ghost'&&!o.appeared&&Math.abs(player.x-o.x)<165){
+   o.appeared=true;spawnBiomeEnemy('ghost',o.x,330);toast('👻 BUH! Aus dem Nichts!');
+  }
+  if(o.kind==='thinIce'){
+   if(o.broken>0){o.broken=Math.max(0,o.broken-dt);if(!o.broken)o.integrity=1}
+   else if(Math.abs(player.x+20-o.x)<70&&player.grounded&&player.y>340){
+    o.integrity=Math.max(0,o.integrity-dt*(vxInput.jump?4:1));
+    if(o.integrity<=0){o.broken=5;biomeSplash('snow',o.x,449,20);sound('break');toast('🧊 KNACK! Das Eis bricht!')}
+   }
+  }
+  if(o.kind==='igloo'&&near&&Math.abs(player.x-o.x)<75&&R.cold<8){R.cold=8;toast('🏠 Ein Iglu! Pfoten wieder warm!')}
+  if(o.kind==='banana'&&near&&Math.sin(clock*1.8+o.phase)>.84&&!o.active){o.active=true;o.y=270;o.vx=-30;o.vy=0}
+  if(o.kind==='banana'&&o.active){o.vy+=860*dt;o.x+=o.vx*dt;o.y=Math.min(441,o.y+o.vy*dt);
+   if(Math.abs(player.x+20-o.x)<28&&Math.abs(player.y+player.h-o.y)<39){
+    player.vx+=(player.facing||1)*390;player.inv=Math.max(player.inv,.35);o.active=false;o.timer=0;toast('🍌 MATSCH! Bananenrutsche!')}
+   if(o.y>=441&&o.timer>5){o.active=false;o.timer=0}
+  }
+  if(o.kind==='boost'&&closeToRealm(o,player.x+20,player.y+50,45,55)&&o.timer>1){
+   o.timer=0;effects.speed=Math.max(effects.speed||0,2);toast('🏎️ PFOTENTURBO!');sound('transform')}
+  if(o.kind==='hurdle'&&closeToRealm(o,player.x+20,player.y+45,29,52)&&player.y>325)hurt();
+  if(o.kind==='oil'&&closeToRealm(o,player.x+20,player.y+55,55,36)){player.vx+=player.facing*340*dt}
+  if((o.kind==='meteor'||o.kind==='ufo')&&near&&!o.hit){
+   if(o.kind==='meteor'){
+    o.y+= (o.vy||0)*dt;o.vy=(o.vy||0)+250*dt;
+    if(o.y>470){o.y=50-(o.timer%2)*160;o.vy=0;biomeSplash('moon',o.x,430,15)}
+   }else o.y=180+Math.sin(clock*2+o.phase)*105;
+   if(closeToRealm(o,player.x+20,player.y+35,37,39))hurt();
+  }
+  if(o.kind==='current'&&Math.abs(player.x-o.x)<85&&inSeaWater())player.vx+=Math.sin(clock*2+o.phase)*160*dt;
+  if(o.kind==='coral'&&Math.abs(player.x-o.x)<45&&Math.abs(player.y-o.y)<60)hurt();
+  if(o.kind==='rock'&&near){o.y+=(o.vy||0)*dt;o.vy=(o.vy||0)+520*dt;
+   if(o.y>450){o.y=80;o.vy=0;biomeSplash('mountain',o.x,430,10)}
+   if(closeToRealm(o,player.x+20,player.y+30,38,42))hurt();
+  }
+  if(o.kind==='avalanche'&&near&&Math.sin(clock*.7+o.phase)>.65){
+   o.slide=(o.slide||0)+dt*180;
+   if(o.slide>235){o.slide=0}
+   if(Math.abs(player.x+20-(o.x-o.slide))<55&&player.y>295)hurt();
+  }
+  if(o.kind==='wind'&&near&&Math.abs(player.x-o.x)<160){R.wind=Math.sin(clock*1.45+o.phase)*150}
+ }
+}
+function tickRealmAfter(dt){
+ const R=level.realm;if(!R)return;
+ if(R.id==='moon'){player.y=Math.max(-900,player.y);player.vy=Math.max(-1150,player.vy)}
+ if(R.id==='snow'&&snowWaterAt(player.x+20)&&player.y>355){
+  player.vy=clamp(player.vy,-320,140);player.y=Math.min(player.y,645);
+  if(vxInput.jump)player.vy=-300;
+  if(player.y>630){player.vy=-65}
+ }
+ if(R.id==='jungle'){
+  if(level.gaps.some(([a,b])=>player.x+20>a&&player.x+20<b)&&player.y>405){
+   player.vy=clamp(player.vy,-180,150);
+   if(vxInput.jump)player.vy=-210;
+   if(player.y>600)player.y=600;
+  }
+  for(const e of level.enemies){if(e.dead||e.type!=='piranha')continue;
+   if(Math.abs(player.x-e.x)<50&&Math.abs(player.y-e.y)<85)hurt();
+  }
+ }
+ if(R.id==='sea'){
+  const underwater=inSeaWater();
+  if(underwater){
+   // Holding jump swims up; releasing it gently descends. Left/right steer.
+   player.vy=clamp(player.vy,-250,120);
+   if(vxInput.jump)player.vy=clamp(player.vy-650*dt,-260,120);
+   else player.vy=Math.min(95,player.vy+210*dt);
+   player.y=clamp(player.y,330,1100);
+  }else if(inAtlantis()){
+   player.y=Math.min(player.y,900);
+   if(player.y>=899){player.vy=0;player.grounded=true}
+  }
+  if(player.x>440&&player.x<level.width-240&&player.y>1140){player.y=1080;player.vy=-120}
+ }
+}
+function shootRealmObstacles(shot){
+ const R=level.realm;if(!R)return;
+ for(const o of R.events){
+  if(o.hit||!['meteor','ufo','vampire','painting','rock'].includes(o.kind))continue;
+  if(Math.abs(shot.x-o.x)<36&&Math.abs(shot.y-o.y)<45){
+   o.hit=true;shot.life=0;biomeSplash(R.id,o.x,o.y,16);sound('enemy');
+   if(o.kind==='meteor'||o.kind==='ufo'){save.coins+=o.kind==='ufo'?5:1;updateUI();persist()}
+   o.y=-390;o.timer=0;return;
+  }
+ }
+}
+function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;tickRealmBefore(dt);if(phase!=='playing')return;discoverStoryEcho();tickCompanion(dt);if(phase!=='playing')return;tickChallenges(dt);
  for(const mount of level.mounts){if(mount.testFreeze>0)mount.testFreeze=Math.max(0,mount.testFreeze-dt);else mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
  if(updateRiding(dt))return;
+ if(processVine(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
  if(transport){tubeTick(dt);camY+=(clamp(player.y-330,-860,870)-camY)*Math.min(1,dt*8);cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*6);return}
  player.tubeCooldown=Math.max(0,player.tubeCooldown-dt);
@@ -1255,21 +1434,24 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;dis
  if(blocked!==!!effects.silence)updateUI();
  player.inv=Math.max(0,player.inv-dt);boss.inv=Math.max(0,boss.inv-dt);powerFlash=Math.max(0,powerFlash-dt);specialCooldown=Math.max(0,specialCooldown-dt);coyote=Math.max(0,coyote-dt);queuedJump=Math.max(0,queuedJump-dt);
  const speedFactor=(effects.speed>0?1.65:1)*(effects.slow>0?.52:1)*(player.dizzy>0?.64:1);
- const target=(Number(vxInput.right)-Number(vxInput.left))*330*speedFactor;
+ const biome=level.realm.id,water=inSeaWater();
+ const topSpeed=biome==='race'?420:water?200:330;
+ const target=(Number(vxInput.right)-Number(vxInput.left))*topSpeed*speedFactor+(biome==='snow'?level.realm.wind*.26:biome==='mountain'?level.realm.wind*.45:0);
  const slick=level.challenges?.some(o=>o.type==='ice'&&Math.abs(player.x+20-o.x)<115&&player.grounded&&!player.route);
- const acceleration=slick?330:(player.grounded?2350:1470);
+ const acceleration=(biome==='moon'?360:biome==='snow'&&player.grounded?340:biome==='race'?2800:water?700:slick?330:(player.grounded?2350:1470));
  player.vx+=(target-player.vx)*Math.min(1,dt* (acceleration/330));if(Math.abs(target)<1&&Math.abs(player.vx)<4)player.vx=0;
  if(target)player.facing=target>0?1:-1;
- if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=save.perk==='bounce'?-750:-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
+ if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=biome==='moon'?-900:save.perk==='bounce'?-750:-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
  if(!vxInput.jump&&player.vy<-280)player.vy+=save.perk==='glide'?1350*dt:1850*dt;
  const previousBottom=player.y+player.h;
  const priorVy=player.vy;
- player.vy=Math.min(1100,player.vy+(save.perk==='glide'?1500:1780)*dt);
+ player.vy=Math.min(biome==='moon'?760:1100,player.vy+(biome==='moon'?425:water?330:save.perk==='glide'?1500:1780)*dt);
  if(effects.fly>0&&vxInput.jump){player.vy=-280;player.grounded=false;coyote=0;queuedJump=0}
  if(effects.fly>0)player.y=Math.max(48,player.y);
  player.x=clamp(player.x+player.vx*dt,0,level.width-player.w);if(player.grounded&&Math.abs(player.vx)>14)player.runCycle+=Math.abs(player.vx)*dt*.073;
  player.y+=player.vy*dt;let landing=null;
  if(player.vy>=0){for(const platform of [...level.ground,...level.platforms,...level.routePlatforms]){
+ if(biome==='snow'&&platform.ground&&level.realm.events.some(o=>o.kind==='thinIce'&&o.broken>0&&Math.abs(player.x+20-o.x)<72))continue;
  if(player.x+player.w-7<platform.x||player.x+7>platform.x+platform.w)continue;
  if(previousBottom<=platform.y+10&&player.y+player.h>=platform.y){if(!landing||platform.y<landing.y)landing=platform}
  }}
@@ -1282,6 +1464,7 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;dis
    if(startRide(m))return;
   }
  }
+ tickRealmAfter(dt);
  if(player.y>1400){enemyShots=[];shots=[];sound('hurt');save.hearts=Math.max(0,save.hearts-1);
  if(save.hearts<=0)loseLife('Ein sehr, sehr tiefer Plumps!');else{player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;camY=0;persist();updateUI();toast('Plumps! '+hero().name+' landet auf der Würde!')}}
 
@@ -1307,7 +1490,7 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;dis
  const powerItem=level.powerItem;if(!powerItem.taken&&Math.abs(player.x+player.w/2-powerItem.x)<38&&Math.abs(player.y+player.h/2-powerItem.y)<51)transform(powerItem);
  for(const shot of shots){
   if(shot.homing){let target=null,distance=450;for(const e of level.enemies){if(e.dead||shot.hit.includes(e.id))continue;const d=Math.hypot(e.x-shot.x,e.y-shot.y);if(d<distance){distance=d;target={x:e.x+18,y:e.y+20}}}if(!target&&boss.active&&!boss.done)target={x:boss.x+Math.sin(clock*1.3)*60+15,y:boss.y+22};if(target){const desired=Math.atan2(target.y-shot.y,target.x-shot.x),current=Math.atan2(shot.vy,shot.vx);const delta=Math.atan2(Math.sin(desired-current),Math.cos(desired-current)),a=current+clamp(delta,-dt*5.2,dt*5.2),v=610;shot.vx=Math.cos(a)*v;shot.vy=Math.sin(a)*v}}
-  shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;if(shot.gravity)shot.vy+=shot.gravity*dt;if(shot.bounce)shot.y+=Math.sin(clock*16+shot.x*.01)*2;if(shot.spin)shot.y+=Math.sin(clock*18)*2;shot.life-=dt;
+  shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shootRealmObstacles(shot);if(shot.gravity)shot.vy+=shot.gravity*dt;if(shot.bounce)shot.y+=Math.sin(clock*16+shot.x*.01)*2;if(shot.spin)shot.y+=Math.sin(clock*18)*2;shot.life-=dt;
   for(const e of level.enemies){if(e.dead||shot.hit.includes(e.id)||Math.abs(shot.x-(e.x+18))>20+shot.radius||Math.abs(shot.y-(e.y+24))>26+shot.radius)continue;
    if(hitEnemy(e,shot.damage,shot.x,shot.y)){shot.hit.push(e.id);shot.pierce--;if(shot.splash){for(const near of level.enemies){if(near!==e&&!near.dead&&Math.hypot(near.x-e.x,near.y-e.y)<shot.splash)hitEnemy(near,shot.damage,near.x,near.y)}burst(e.x,e.y,shot.color,32)}if(shot.pierce<=0)shot.life=0;break}
   }
