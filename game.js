@@ -179,6 +179,12 @@ function sound(kind){if(audioMuted)return;let now;try{audioCtx??=new (window.Aud
  if(kind==='break'){[780,560,390].forEach((n,i)=>tone(n,now+i*.075,.18,'triangle',.08))}
  if(kind==='dice'||kind==='reward'){[392,523,659,784,988].forEach((n,i)=>tone(n,now+i*.07,.14,i%2?'triangle':'sine',.055));}
  if(kind==='house'){tone(330,now,.15,'triangle',.04);tone(659,now+.12,.14,'sine',.05)}
+ if(kind==='tube'){tone(140,now,.33,'sawtooth',.07,540);tone(740,now+.27,.17,'triangle',.04,200)}
+ if(kind==='silver'){[660,840].forEach((n,i)=>tone(n,now+i*.07,.12,'triangle',.05))}
+ if(kind==='gold'){[523,659,784,1046].forEach((n,i)=>tone(n,now+i*.06,.19,'sine',.065))}
+ if(kind==='bronze'){tone(580,now,.10,'triangle',.04,780)}
+ if(kind==='enemystrong'){tone(230,now,.2,'sawtooth',.045,105);tone(430,now+.04,.11,'triangle',.05)}
+
  if(kind==='ride'){[330,493,740,600,920].forEach((n,i)=>tone(n,now+i*.085,.15,i%2?'triangle':'sine',.06))}
 }
 // Original four-song soundtrack, synthesized in real time after the first user gesture.
@@ -191,6 +197,12 @@ const MUSIC_SCENES={
  clock:{lead:'triangle',second:'sawtooth',bass:'sine',shift:.75,volume:.019,percussion:'tick',octave:1}
 };
 const SCENE_IDS=['meadow','forest','sugar','clock'];
+const WORLD_HARMONIES=[
+ [[262,330,392],[294,370,440],[220,277,330],[246,311,370]],
+ [[196,233,294],[175,220,262],[164,208,247],[196,246,294]],
+ [[311,392,466],[349,440,523],[277,349,415],[311,392,523]],
+ [[220,262,330],[196,246,294],[175,220,277],[220,277,330]]
+];
 let musicScene='explore',activeScore='explore',musicBlend=1,musicTransitions=0;
 function detectMusicScene(){
  if(musicScene==='house'||musicScene==='reward')return musicScene;
@@ -264,6 +276,11 @@ function musicTick(){
    }
   }
   if(b)scoreNote(b*(route?.75:1),musicAt,tempo*(route?2.15:1.4),style.bass,style.volume*(stressed?.84:.55)*levelGain,true);
+  if(i%8===0 && !gag){
+   const progression=WORLD_HARMONIES[act]||WORLD_HARMONIES[3],triad=progression[Math.floor(musicStep/8)%progression.length];
+   const padWave=act===1?'sine':act===2?'triangle':act===3?'sawtooth':'sine';
+   for(let c=0;c<3;c++)scoreNote(triad[c]*(route?.75:1),musicAt+c*.022,tempo*7.3,padWave,style.volume*(act===3?.12:.17)*levelGain,true);
+  }
   if(stressed||activeScore==='power'){
    if(i%2===0){const pitch=n||base.melody[(i+1)%16]||523;scoreNote(pitch*2,musicAt,tempo*.35,'triangle',style.volume*.32*levelGain)}
   }
@@ -603,7 +620,7 @@ function pickCoin(coin){
  if(coin.taken)return false;coin.taken=true;save.coins+=COIN_VALUES[coin.type];
  if(!save.coinTaken.includes(coin.id))save.coinTaken.push(coin.id);
  burst(coin.x,coin.y,coin.type==='gold'?'#ffdf73':coin.type==='silver'?'#c8ebf8':'#dc9d65',9);
- sound('pick');persist();updateUI();return true;
+ sound(coin.type);persist();updateUI();return true;
 }
 function awardDice(house){
  musicScene='reward';sound('dice');
@@ -631,7 +648,7 @@ function beginTube(tube){
  const route=level.routes.find(r=>r.id===tube.route);
  if(!route)return false;
  transport={route:route.id,direction:tube.direction,elapsed:0,x:tube.x,y:tube.y};
- player.vx=0;player.vy=0;player.grounded=false;clearInputs();sound('transform');toast(tube.direction==='in'?'🌀 FFFSCHLURP! '+hero().name+' wird eingesaugt!':'🎺 PLÖPP! Der Rückweg ruft!');
+ player.vx=0;player.vy=0;player.grounded=false;clearInputs();sound('tube');toast(tube.direction==='in'?'🌀 FFFSCHLURP! '+hero().name+' wird eingesaugt!':'🎺 PLÖPP! Der Rückweg ruft!');
  return true;
 }
 function tubeTick(dt){
