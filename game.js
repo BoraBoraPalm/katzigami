@@ -590,8 +590,8 @@ function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persi
 function enterLevel(i,withIntro=false){musicScene='explore';const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;companion=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const routes=[
- {id:'cloud',label:'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
- {id:'depth',label:i%2?'Tropfsteinhöhle':'Maulwurfstollen',from:1370,end:Math.min(d.width-350,2750),y:890,kind:i%2?'cave':'burrow',bonus:360}
+ {id:'cloud',label:d.biome==='jungle'?'Baumkronenpfad':d.biome==='mountain'?'Gipfelwolken':'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
+ {id:'depth',label:d.biome==='castle'?'Schlosskerker':d.biome==='snow'?'Unterwasser-Eishöhle':d.biome==='sea'?'Versunkene Höhle':i%2?'Tropfsteinhöhle':'Maulwurfstollen',from:1370,end:Math.min(d.width-350,2750),y:890,kind:d.biome==='castle'?'dungeon':['snow','sea'].includes(d.biome)?'cave':i%2?'cave':'burrow',bonus:360}
  ];
  const tubes=routes.flatMap(q=>[
   {id:q.id+'-in',x:q.from,y:378,route:q.id,direction:'in'},
@@ -2129,13 +2129,21 @@ function drawVerticalWorld(){
   const x=from-cam,w=end-from;
   ctx.save();
   if(kind==='cloud'){
-   const g=ctx.createLinearGradient(0,-770,0,-130);g.addColorStop(0,'#788ee5');g.addColorStop(1,'#e3f9ff');
+   const g=ctx.createLinearGradient(0,-770,0,-130);
+   if(level.realm?.id==='jungle'){g.addColorStop(0,'#15594a');g.addColorStop(1,'#7abc8e')}
+   else{g.addColorStop(0,'#788ee5');g.addColorStop(1,'#e3f9ff')}
    round(x,-740,w,700,30,g,'#f8ffff88',4);
    for(let j=0;j<12;j++){const xx=x+110+j*83,yy=-700+j%4*85;ellipse(xx,yy,57,23,'#ffffff88');ellipse(xx-20,yy-16,28,24,'#ffffffbb')}
-   ctx.font='bold 29px sans-serif';ctx.fillStyle='#fefaff';ctx.fillText('☁️ DIE WOLKENPFOTEN',x+85,-660);
+   ctx.font='bold 29px sans-serif';ctx.fillStyle='#fefaff';ctx.fillText(level.realm?.id==='jungle'?'🌿 DAS DSCHUNGEL-BLÄTTERDACH':'☁️ DIE WOLKENPFOTEN',x+85,-660);
   }else{
-   const bg=kind==='cave'?'#514460':'#755644';
+   const bg=kind==='cave'?'#514460':kind==='dungeon'?'#322d44':'#755644';
    round(x,625,w,625,24,bg,kind==='cave'?'#ac93d5':'#b78f65',4);
+   if(kind==='dungeon'){
+    for(let k=0;k<7;k++){const xx=x+85+k*210;round(xx,765,140,230,10,'#1e1c34','#8b7f8e',6);
+     for(let b=0;b<5;b++)line(xx+18+b*25,770,xx+18+b*25,995,'#b6abb2',5);
+     ellipse(xx+70,1015,40,11,'#58506a');ctx.font='bold 22px serif';ctx.fillStyle='#bbaaca';ctx.fillText('☠',xx+54,883)}
+    for(let k=0;k<9;k++){const xx=x+115+k*167;line(xx,625,xx,787,'#a5a0b2',4);ellipse(xx,791,7,12,'#b6a7d1')}
+   }
    for(let j=0;j<20;j++){const xx=x+j*72,top=665+j%4*15,deep=65+Math.abs(Math.sin(j*12))*90;
     ctx.beginPath();ctx.moveTo(xx-23,top);ctx.lineTo(xx,top+deep);ctx.lineTo(xx+27,top);ctx.closePath();ctx.fillStyle=kind==='cave'?'#9c8bb8':'#af8c66';ctx.fill();
     if(kind==='burrow'){ellipse(xx+18,1045,26,9,'#caa577');ctx.font='15px sans-serif';ctx.fillText('🪱',xx,1085)}
@@ -2272,7 +2280,9 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
   const run=player.grounded&&Math.abs(player.vx)>30,bob=run?Math.abs(Math.sin(player.runCycle))*4:Math.sin(clock*3)*1.5;
   const mx=player.x+player.w/2-cam,my=player.y+player.h*.54;
   ctx.save();if(player.riding){const m=level.mounts.find(x=>x.id===player.riding.id);if(m?.kind==='snail'){ctx.translate(mx,my);ctx.rotate(m.angle||0);ctx.translate(-mx,-my)}}
-  drawHero(mx,my,bob);ctx.restore()
+  drawHero(mx,level.realm.id==='race'?my-13:my,bob);
+  if(level.realm.id==='race'){ctx.save();ctx.translate(mx,my+31);round(-35,-8,70,28,11,'#af83c8','#fff1d5',4);ellipse(-25,23,14,14,'#453a5c');ellipse(25,23,14,14,'#453a5c');round(-15,-19,30,10,5,'#ffe5ad');ctx.restore()}
+  ctx.restore()
  }
  drawEffects();drawStatusTimers();ctx.restore();realmHUD();
  if(powerFlash>0){ctx.save();ctx.globalAlpha=powerFlash*.14;ctx.fillStyle=POWERS[save.power]?.color||'#fff';ctx.fillRect(0,0,viewW,HEIGHT);ctx.restore()}
