@@ -445,7 +445,7 @@ function landscapeDetails(){
  }
  ctx.restore();
 }
-function sky(){const a=level||CHAPTERS[0],grad=ctx.createLinearGradient(0,0,0,HEIGHT);grad.addColorStop(0,a.sky[0]);grad.addColorStop(1,a.sky[1]);ctx.fillStyle=grad;ctx.fillRect(0,0,viewW,HEIGHT);
+function sky(){const a=level||CHAPTERS[0],grad=ctx.createLinearGradient(0,0,0,HEIGHT);grad.addColorStop(0,a.sky[0]);grad.addColorStop(1,a.sky[1]);ctx.fillStyle=grad;ctx.fillRect(-50,-50,viewW+100,HEIGHT+100);
  if(level.stage===1){ctx.fillStyle='#ff99dc13';ctx.fillRect(0,0,viewW,HEIGHT)}
  if(level.stage===2){ctx.fillStyle='#7f5cbf19';ctx.fillRect(0,0,viewW,HEIGHT)}
  if(a.toneVariant==='Dämmerung'){ctx.fillStyle='#5f378222';ctx.fillRect(0,0,viewW,HEIGHT)}
@@ -478,9 +478,12 @@ function drawStatusTimers(){
  if(!player)return;
  const active=Object.keys(effects).filter(k=>effects[k]>0);
  if(!active.length)return;
- const cx=clamp(player.x+player.w/2-cam,45,viewW-45),top=Math.max(66,player.y-95);
+ const cx=clamp(player.x+player.w/2-cam,45,viewW-45),columns=viewW<500?2:Math.min(5,active.length);
+ const rows=Math.ceil(active.length/columns),top=Math.max(69+rows*27,player.y-81);
  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
- active.forEach((key,j)=>{const data=CHARMS[key],x=cx+(j-(active.length-1)/2)*82,y=top-15+(j%2)*2;
+ active.forEach((key,j)=>{const data=CHARMS[key],row=Math.floor(j/columns),col=j%columns;
+ const inRow=Math.min(columns,active.length-row*columns);
+ const x=cx+(col-(inRow-1)/2)*82,y=top-15-(rows-1-row)*29;
   const bx=clamp(x,43,viewW-43);
   round(bx-39,y-13,78,27,10,data.bad?'#573857e8':'#fff9e9ed',data.color,2);
   ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle=data.bad?'#fff':'#5b4779';
@@ -490,6 +493,7 @@ function drawStatusTimers(){
 }
 function drawMushroom(item){const t=clock*2+item.x*.05,x=item.x-cam,y=item.y+Math.sin(t)*5;if(item.taken||x<-50||x>viewW+50)return;ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(t)*.065);ellipse(0,22,24,5,'#724e9066');ellipse(0,12,10,19,'#fff3db');round(-9,6,18,18,7,'#fff4db','#cfa4a7',1.7);const color=MUSHROOMS[item.id].color;ctx.beginPath();ctx.moveTo(-25,5);ctx.quadraticCurveTo(-24,-25,0,-28);ctx.quadraticCurveTo(24,-25,25,5);ctx.quadraticCurveTo(0,15,-25,5);ctx.fillStyle=color;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff5ed';ctx.stroke();ellipse(-12,-9,5,3.5,'#fff9ed',-.5);ellipse(8,-16,6,4.5,'#fff9ed',.3);ellipse(16,-3,4,3,'#fff9ed');ellipse(-4,10,1.7,2.5,'#655279');ellipse(5,10,1.7,2.5,'#655279');ctx.restore()}
 function drawEnemy(e){if(e.dead)return;const type=ENEMY_TYPES[e.type],x=e.x-cam+18,y=e.y+29;
+ if(x<-140||x>viewW+140)return; // Keep long levels smooth on phone GPUs.
  ctx.save();if(e.inv>0&&Math.floor(clock*23)%2===0)ctx.globalAlpha=.55;
  drawCat(x,y,type.scale,'shadow',Math.sin(clock*5+e.seed)*3,e.x>(player?.x??0)?-1:1);
  ctx.textAlign='center';ctx.font='bold 20px sans-serif';ctx.fillStyle=type.color;
