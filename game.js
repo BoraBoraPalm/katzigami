@@ -176,6 +176,89 @@ let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,righ
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
+
+// Separate, explicitly named bookmarks; autosave remains unchanged.
+const SLOT_KEY='katzigami-named-saves-v1',SLOT_LIMIT=8;
+function namedSlots(){
+ try{const a=JSON.parse(localStorage.getItem(SLOT_KEY)||'[]');return Array.isArray(a)?a.filter(v=>v&&typeof v.name==='string'&&v.state?.version===1).slice(0,SLOT_LIMIT):[]}catch{return []}
+}
+function storeSlots(slots){try{localStorage.setItem(SLOT_KEY,JSON.stringify(slots));return true}catch{return false}}
+function snapshotForSlot(name){
+ const copy=JSON.parse(JSON.stringify(save));
+ copy.manualPosition=(player&&level&&phase!=='menu')?{level:save.level,x:clamp(player.x,0,level.width-65),y:player.y,route:player.route||null}:null;
+ return {name:name.trim().slice(0,44),timestamp:Date.now(),level:save.level,hero:save.character,coins:save.coins,state:copy};
+}
+function createNamedSlot(name){
+ const safe=String(name||'').trim().slice(0,44);
+ if(!safe)return {ok:false,error:'Bitte gib deinem Spielstand einen Namen.'};
+ const all=namedSlots(),existing=all.findIndex(v=>v.name.toLocaleLowerCase('de')===safe.toLocaleLowerCase('de'));
+ if(existing<0&&all.length>=SLOT_LIMIT)return {ok:false,error:'Maximal acht benannte Spielstände. Lösche zuerst einen alten Stand.'};
+ const slot=snapshotForSlot(safe);if(existing>=0)all.splice(existing,1);all.unshift(slot);
+ if(!storeSlots(all))return {ok:false,error:'Browser-Speicherplatz nicht verfügbar.'};
+ return {ok:true,name:safe};
+}
+function restoreNamedSlot(name){
+ const slot=namedSlots().find(v=>v.name===name);if(!slot)return false;
+ try{
+  localStorage.setItem(SAVE_KEY,JSON.stringify(slot.state));
+  save=loadSave();save.won=false;
+  enterLevel(save.level,false);
+  const p=slot.state.manualPosition;
+  if(p&&p.level===save.level&&Number.isFinite(p.x)&&Number.isFinite(p.y)){
+   player.x=clamp(p.x,0,level.width-player.w-150);player.y=clamp(p.y,-770,1065);
+   player.route=p.route==='cloud'||p.route==='depth'?p.route:null;
+   player.inv=3;player.grounded=false;player.vx=0;player.vy=0;
+   cam=clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW));
+   camY=player.route?clamp(player.y-330,-850,865):0;
+  }
+  persist();return true
+ }catch{return false}
+}
+function removeNamedSlot(name){
+ const all=namedSlots(),next=all.filter(v=>v.name!==name);
+ return all.length>next.length&&storeSlots(next);
+}
+function showSaveManager(returnToGame=false){
+ const slots=namedSlots();phase='paused';clearInputs();
+ presentCard('💾 SPIELSTÄNDE','Deine Abenteuer',hero().icon+' 📜 ✨',
+  'Benannte Spielstände kannst du einzeln laden oder löschen. Bis zu acht Speicherplätze, lokal in diesem Browser. Die automatische Speicherung bleibt erhalten.',
+  [...slots.map(slot=>({label:'📖 '+slot.name+' · Level '+(slot.level+1)+' · 🪙 '+slot.coins,action:()=>showSlotActions(slot.name,returnToGame)})),
+   {label:'✏️ Neuen Spielstand speichern',action:()=>showSaveNameEditor(returnToGame)},
+   {label:'↩ Zurück',secondary:true,action:returnToGame?pauseMenu:menu}]);
+}
+function showSaveNameEditor(returnToGame){
+ phase='paused';
+ presentCard('💾 SPEICHERN','Wie heißt dein Abenteuer?',hero().icon+' ✏️ 📜',
+  'Gib deinem aktuellen Fortschritt einen Namen. Ein bereits vorhandener Name wird durch den aktuellen Spielstand ersetzt.',
+  [{label:'↩ Zurück',secondary:true,action:()=>showSaveManager(returnToGame)}]);
+ const cardEl=overlayContent.querySelector('.story-card');
+ const form=document.createElement('form');form.className='save-name-form';
+ const input=document.createElement('input');input.type='text';input.maxLength=44;input.required=true;input.autocomplete='off';input.placeholder='Zum Beispiel: Vor dem Uhrwerkboss';input.setAttribute('aria-label','Name des Spielstands');
+ const status=document.createElement('p');status.className='slot-message';status.setAttribute('role','status');
+ const button=document.createElement('button');button.type='submit';button.className='story-button';button.textContent='💾 Mit diesem Namen speichern';
+ form.append(input,button,status);cardEl.append(form);
+ form.addEventListener('submit',e=>{e.preventDefault();const result=createNamedSlot(input.value);if(result.ok){
+   sound('win');toast('💾 Gespeichert: '+result.name);showSaveManager(returnToGame);
+  }else{status.textContent=result.error;input.focus()}});
+}
+function showSlotActions(name,returnToGame){
+ const slot=namedSlots().find(v=>v.name===name);
+ if(!slot)return showSaveManager(returnToGame);
+ phase='paused';
+ presentCard('📜 MANUELLER SPIELSTAND',slot.name,hero().icon+' 💾 🌼',
+  'Gespeichert in Level '+(slot.level+1)+'. '+slot.coins+' Münzen. Laden ersetzt den automatischen Spielstand, andere benannte Speicherplätze bleiben erhalten.',
+  [{label:'▶ Diesen Spielstand laden',action:()=>{if(!restoreNamedSlot(name)){showSaveManager(returnToGame);toast('Spielstand konnte nicht geladen werden.')}}},
+   {label:'🗑 Diesen Spielstand löschen',secondary:true,action:()=>{removeNamedSlot(name);showSaveManager(returnToGame)}},
+   {label:'↩ Zurück',secondary:true,action:()=>showSaveManager(returnToGame)}]);
+}
+function pauseMenu(){
+ phase='paused';clearInputs();
+ presentCard('PAUSE · KATZIGAMI','Eine kleine Verschnaufpause',hero().icon+' ☕ 🍪',
+  'Die Welt wartet auf dich. Deine Buffs und Flüche pausieren ebenfalls.',
+  [{label:'🐾 Weiterspielen',action:resume},
+   {label:'💾 Benannte Spielstände',action:()=>showSaveManager(true)},
+   {label:'🏠 Hauptmenü',secondary:true,action:menu}]);
+}
 function updateUI(){const ability=$('special'),power=save.power&&POWERS[save.power];ability.disabled=!power||!!effects.silence;ability.classList.toggle('unlocked',!!power&&!effects.silence);ability.setAttribute('aria-label',power?'Spezialfähigkeit '+power.name+' einsetzen':'Spezialfähigkeit gesperrt – zuerst Verwandlungspilz einsammeln');ability.title=effects.silence?'Magie für '+effects.silence.toFixed(1)+' Sekunden gesperrt':power?'Stufe '+power.rank+' – '+power.attack+': '+power.hint:'Zuerst Verwandlungspilz sammeln';$('special-icon').textContent=power?power.symbol:'🔒';$('special-label').textContent=effects.silence?'FLUCH':power?'STUFE '+power.rank:'GESPERRT';ability.style.setProperty('--power-color',power?power.color:'#c6b6c8');heartsUI.textContent='♥'.repeat(save.hearts)+'♡'.repeat(Math.max(0,diff().hearts-save.hearts))+' 🐾'+save.lives;
  mushroomsUI.textContent='🍄'+save.collected.length+'/'+TOTAL+' 🪙'+save.coins;levelUI.textContent=(save.level+1)+' / '+CHAPTERS.length;chapterUI.textContent=CHAPTERS[save.level].name.toUpperCase();$('sound-toggle').textContent=audioMuted?'♩':'♫';$('sound-toggle').setAttribute('aria-label',audioMuted?'Ton einschalten':'Ton ausschalten')}
 function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);if(r.width<1||r.height<1)return;viewW=HEIGHT*r.width/r.height;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(canvas.width/viewW,0,0,canvas.height/HEIGHT,0,0);ctx.imageSmoothingEnabled=true;if(level)cam=clamp(cam,0,Math.max(0,level.width-viewW))}
@@ -313,7 +396,7 @@ function clearInputs(){vxInput.left=vxInput.right=vxInput.jump=false;queuedJump=
 function showOverlay(html){overlayContent.innerHTML=html;overlay.classList.add('visible');clearInputs()}
 function hideOverlay(){overlay.classList.remove('visible');overlayContent.replaceChildren()}
 function resume(){musicScene='explore';hideOverlay();phase='playing';clearInputs();lastFrame=performance.now();musicAt=0}
-function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard('PAUSE · KATZIGAMI','Eine kleine Verschnaufpause',hero().icon+' ☕ 🍪','Die Welt wartet, solange du verschnaufst. Auch zeitbegrenzte Kräfte und Flüche pausieren.',[{label:'🐾 Weiterspielen',action:resume},{label:'🏠 Hauptmenü',secondary:true,action:menu}])}else if(phase==='paused')resume()}
+function pause(){if(phase==='playing')pauseMenu();else if(phase==='paused')resume()}
 function escapeText(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function card(tag,title,portrait,body,buttons){return `<article class="story-card"><div class="story-tag">${tag}</div><div class="story-portrait"><span>${portrait}</span></div><h1 class="story-title">${title}</h1><p class="story-copy">${body}</p><div class="choice-grid">${buttons.map((b,i)=>`<button class="story-button ${b.secondary?'secondary':''}" data-option="${i}" type="button">${b.label}</button>`).join('')}</div></article>`}
 function presentCard(tag,title,portrait,body,options){showOverlay(card(tag,title,portrait,body,options));overlayContent.querySelectorAll('[data-option]').forEach((el,i)=>el.addEventListener('click',()=>{sound('choice');hideOverlay();options[i].action()},{once:true}))}
@@ -403,6 +486,7 @@ function difficultySelect(character){
 function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABENTEUER','KATZIGAMI ✿','🐱 🍄 🌸','Die Herzuhr steht still, Nox kontrolliert die Schattenwächter und Königin Dahlia verbirgt ein gefährliches Geheimnis. Sammle sieben Pilze und entscheide, wem du vertraust – mit fünf Helden und einer Geschichte mit Konsequenzen.',[
  ...(hasSavedGame()&&save.lives>0? [{label:save.won?'🌸 Noch einmal das Finale / weiterspielen':'🐾 Spielstand fortsetzen',action:()=>enterLevel(save.level,true)}]:[]),
  {label:'✿ Neues Abenteuer beginnen',action:characterSelect},
+ {label:'💾 Benannte Spielstände',secondary:true,action:()=>showSaveManager(false)},
  {label:'🎮 So spielt man',secondary:true,action:help}
  ]);
 }
