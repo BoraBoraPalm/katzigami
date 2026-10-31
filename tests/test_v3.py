@@ -14,19 +14,21 @@ with sync_playwright() as p:
  page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(HTML,wait_until='domcontentloaded')
  page.locator('[data-option="0"]').click()
+ page.locator('[data-option="0"]').click() # hero
+ page.locator('[data-option="1"]').click() # medium
  page.locator('[data-option="0"]').click()
  api='window.__katzigamiTest'
  def snapshot():return page.evaluate(api+'.snapshot()')
  # 12 visually distinct chapters, extended terrain, seven story mushrooms only.
  lengths=[];stages=[];foes=set();items=0;buffs=set()
- for i in range(12):
+ for i in range(20):
   page.evaluate(f'{api}.enterLevel({i})')
   q=snapshot();assert q['level']==i and q['width']>=3000,q
   lengths.append(q['width']);stages.append((q['act'],q['stage']))
   foes.update(x['type'] for x in q['enemies'])
   buffs.update(x['kind'] for x in q['charms'])
   items+=page.evaluate(f'(()=>{{{api}.collectAll();return {api}.snapshot().collected.length}})()') if False else 0
- assert len(set(stages))==12,stages
+ assert len(set(stages))==20,stages
  assert max(lengths)>4400,lengths
  assert len(foes)>=8,foes
  assert buffs=={'speed','invincible','fly','sway','slow','silence'},buffs
@@ -74,5 +76,5 @@ with sync_playwright() as p:
  page.evaluate(f'{api}.step(2)')
  assert 0 <= remaining-snapshot()['effects']['speed'] < .2, 'Effect timer should freeze while paused'
  assert not errors,errors
- print('PASS – 12 long stages, eight+ feline enemy classes, six timed buffs/curses, damage immunity, silence, flight, cooldown expiration and pause')
+ print('PASS – 20 long stages, eight+ feline enemy classes, six timed buffs/curses, damage immunity, silence, flight, cooldown expiration and pause')
  b.close()
