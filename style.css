@@ -59,3 +59,10 @@
 @keyframes loot-glow{0%,100%{opacity:.20}50%{opacity:.43}}
 @media(max-height:430px){.loot-halo{width:88px;height:66px;border-radius:20px}.loot-symbol{font-size:36px}.loot-art{gap:1px;margin:2px auto 4px}.loot-art strong{font-size:13px}.loot-art small{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.loot-halo,.loot-spark,.loot-card:before{animation:none}}
+
+/* Named adventure bookmarks: accessible typing on mobile without changing game controls. */
+.save-name-form{display:grid;gap:10px;margin:12px auto 0;max-width:500px;text-align:left}
+.save-name-form input{display:block;width:100%;min-height:53px;padding:10px 15px;border-radius:15px;border:3px solid #d6b2d4;background:#fffdf9;color:#57405f;font:800 16px 'Nunito',system-ui,sans-serif;outline-offset:3px;touch-action:manipulation;user-select:text;-webkit-user-select:text}
+.save-name-form input:focus{border-color:#c78caf;box-shadow:0 0 0 3px #efd3e8}
+.save-name-form button{width:100%}
+.slot-message{margin:3px 0;font-size:13px;font-weight:800;color:#ac5985}
