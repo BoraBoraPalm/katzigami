@@ -114,6 +114,21 @@ function openingForHero(){
  const details={cat:'das Mondglöckchen ihres verschwundenen Vaters',dog:'die Uhr seiner verschollenen Schwester',chicken:'ein Ei, das rückwärts zu ticken beginnt',rabbit:'ein Foto, aus dem alle Katzen verschwinden',fox:'einen Brief seiner früheren Mentorin'};
  return hero().name+' will eigentlich nur zum Blütenfest. Doch als die Herzuhr mitten am Tag verstummt, beginnt '+details[save.character]+' zu leuchten. Eine Warnung erscheint: »Wenn die siebte Glocke schweigt, gibt es kein Morgen mehr.«';
 }
+
+const STORY_ECHOES=[
+ ['Pip: »Ein Pilz zeigt nach Norden, die anderen nach Nox’ Schloss.«','Miso: »Die Schattenkatzen bewachen keine Schätze. Sie bewachen die Wahrheit.«','Ein Uhrensplitter trägt die Gravur: „Keine Zukunft gehört einem Einzigen.“','Ein Wachkater flüstert: »Wir folgen nur den Briefen des Uhrmeisters.«','Eine Glocke erklingt. Nox hört sie – und schickt Verstärkung.'],
+ ['In der Wurzelwand steckt das zweite Stück von Pips gefälschtem Befehl.','Ein Riesenwurm zeigt auf einen Geheimgang unter dem Schloss.','Miso: »Nox hat die Tunnel verschließen lassen. Wovor hat er Angst?«','Eine Fledermaus singt eine Melodie, die nur Zeitpilze verstehen.','Im Moos liegt Dahlias Siegel – sie war hier, bevor alles verblasste.'],
+ ['Pip: »Die Königin hatte Angst. Vielleicht hatte ich vorschnell geurteilt.«','Dahlia: »Ich habe gerettet, was ich konnte. Das reicht vielleicht nicht.«','Ein Kristall zeigt einen fremden Garten voller ungespielter Morgen.','Die Wolken flüstern, dass Nox nicht alle Erinnerungen löschen konnte.','Eine Sanduhr zerbricht. Darin steckt ein Brief aus der Zukunft.'],
+ ['Nox: »Was ist ein Königreich wert, dessen Zukunft niemand kontrolliert?«','Spiegel-Momo: »Manchmal wünsche ich mir, ich hätte einfach Abschied genommen.«','Dahlia: »Du kannst Zeit nicht besitzen. Du kannst nur in ihr leben.«','Ein letzter Uhrzeiger dreht sich, obwohl die Herzuhr stillsteht.','Die siebte Glocke bebt. Hinter dem Spiegel wartet die Entscheidung.']
+];
+function discoverStoryEcho(){
+ if(!player||!level||phase!=='playing')return;
+ const id='echo'+save.level;
+ if(player.x<level.width*.43||save.shown.includes(id))return;
+ save.shown.push(id);persist();
+ const line=STORY_ECHOES[actOf(save.level)]?.[level.stage];
+ if(line){toast('📜 '+line);sound('choice')}
+}
 const CAT_PERSONALITIES=['frech','vorsichtig','dramatisch','verspielt','misstrauisch'];
 const HEROES={
  cat:{name:'Momo',label:'🐱 Momo · Samtpfote',blurb:'Ausgewogen, schnurrende Zaubergeschosse.',icon:'🐱'},
@@ -607,14 +622,14 @@ function endChoice(){if(phase!=='playing')return;dialog({tag:'FINALE · DEINE EN
  {label:'🌙 Alles für immer bewahren – den Moment einfrieren',action:()=>ending('freeze')}
  ]})}
 function ending(choice){musicScene='victory';save.flags.finalChoice=choice;save.won=true;let type,title,body;
- if(choice==='freeze'){type='MOND-ENDE';title='Ein schnurrender Augenblick';body='Die Zeit steht still. Alle Katzen genießen ewig dieselbe Teestunde. Problem: Der Tee ist nach vier Milliarden Schlucken noch immer lauwarm. Momo lernt, dass auch perfekte Tage manchmal weitergehen sollten.'}
+ if(choice==='freeze'){type='MOND-ENDE';title='Ein schnurrender Augenblick';body='Die Zeit steht still, und Nox übernimmt die letzte Uhr. Niemand muss sich mehr verabschieden – aber niemand darf mehr wachsen. Der Tee bleibt ewig lauwarm, sogar die Kekse schmecken immer gleich. Ein schönes Gefängnis, das du vielleicht eines Tages wieder öffnest.'}
  else if(save.collected.length===TOTAL&&save.flags.helpedMiso&&save.flags.trustedQueen&&save.flags.readLetter&&save.flags.kindShadow){type='WAHRES STERNEN-ENDE';title='Sieben Pilze und neun Leben';body='Du hast alle sieben Pilze gefunden, Miso gerettet, Dahlia vertraut und Zukunfts-Momo vergeben! Der Wald erblüht. Pip eröffnet eine Nachrichtenagentur, die erstmals Fakten prüft. Und Miso bestellt eine Pizza. Mit Pilzen. Wahnsinn!'}
  else if(save.collected.length===TOTAL){type='REGENBOGEN-ENDE';title='Die Farben kehren zurück';body='Alle sieben Pilze leuchten gleichzeitig! Die Uhr erwacht. Die Blumen blühen wieder, Dahlia lässt die Farben frei, und Momo wird zur offiziellen Heldin der königlichen Snackabteilung.'}
  else {type='PFOTEN-ENDE';title='Ein unperfekt perfekter Morgen';body='Die Zeit geht wieder weiter – auch mit ein paar fehlenden Pilzen. Manchmal muss man mutig sein, bevor man alles versteht. Momo und die Katzen feiern mit einer Torte, die verdächtig nach Thunfisch schmeckt.'}
  // A completed adventure also reflects the player's freely written answers and allegiances.
  const bonds=Object.values(save.relations||{}).reduce((a,b)=>a+b,0);
  const epilogue=bonds>=3?' Deine befreundeten Katzen organisieren ein prachtvolles Fest.':bonds<=-2?' Einige misstrauische Katzen bleiben als schwierige Rivalen zurück.':' Die anderen Katzen versprechen, noch viele Fragen zu stellen.';
- body+=' '+mystery().ending+epilogue;
+ body+=' '+(choice==='release'?'Nox’ Uhrwerk zerfällt: Er verliert die Macht über alle ungelebten Morgen. ':'Nox zieht seine goldene Uhr enger um das eingefrorene Königreich. ')+mystery().ending+epilogue;
  save.ending=type;persist();sound('win');phase='ending';presentCard(`🏆 ${type}`,title,'🐈 🌈 🍄',body,[{label:'🐾 Die Pilze noch einmal suchen',action:()=>{save.won=false;save.level=0;save.checkpoint=0;persist();enterLevel(0)}},{label:'🏠 Hauptmenü',secondary:true,action:menu}])}
 function pickCoin(coin){
  if(coin.taken)return false;coin.taken=true;save.coins+=COIN_VALUES[coin.type];
@@ -806,7 +821,7 @@ function drawMount(m){
  if(player?.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
-function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
+function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();
  for(const mount of level.mounts){if(mount.testFreeze>0)mount.testFreeze=Math.max(0,mount.testFreeze-dt);else mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
  if(updateRiding(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
