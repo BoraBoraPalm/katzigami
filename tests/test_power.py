@@ -19,7 +19,7 @@ def snap(p):return p.evaluate('window.__katzigamiTest.snapshot()')
 def click(p,n=0):p.locator('[data-option="%d"]'%n).click()
 
 with sync_playwright() as P:
- browser=P.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox','--disable-dev-shm-usage'])
+ browser=P.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox','--disable-dev-shm-usage'])
  for w,h in [(844,390),(390,844),(360,740),(1440,900),(320,640)]:
   page,errors=launch(browser,w,h)
   coords={id:page.locator('#'+id).bounding_box() for id in ('left','right','jump','special')}
