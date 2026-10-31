@@ -37,7 +37,7 @@ with sync_playwright() as P:
   page.close()
  print('PASS: preserved large movement+jump control positions; adjacent non-overlapping ability button at 320/360/390 portrait, 844 landscape and desktop')
  page,errors=launch(browser)
- click(page,0);click(page,0)
+ click(page,0);click(page,0);click(page,1);click(page,0)
  before=snap(page)
  assert before['power'] is None and before['shots']==0
  assert not page.evaluate('window.__katzigamiTest.cast()'),'Cast was possible without power mushroom'
@@ -74,7 +74,7 @@ with sync_playwright() as P:
  page,errors=launch(browser)
  click(page,0);click(page,0)
  for i,power in enumerate(('blossom','spark','moon','starlight')):
-  page.evaluate('(i)=>window.__katzigamiTest.enterLevel(i*3)',i)
+  page.evaluate('(i)=>window.__katzigamiTest.enterLevel(i*5)',i)
   page.evaluate('window.__katzigamiTest.takePower()')
   assert snap(page)['power']==power,(i,snap(page)['power'])
   assert not page.locator('#special').is_disabled()
