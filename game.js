@@ -153,23 +153,104 @@ function sound(kind){if(audioMuted)return;let now;try{audioCtx??=new (window.Aud
  if(kind==='transform'){[392,523,659,784,1046,1318,1568].forEach((n,i)=>tone(n,now+i*.085,.27,i%2?'triangle':'sine',.10))}
  if(kind==='cast'){tone(650,now,.10,'sine',.055,1150);tone(330,now+.05,.14,'triangle',.04,760)}
  if(kind==='break'){[780,560,390].forEach((n,i)=>tone(n,now+i*.075,.18,'triangle',.08))}
+ if(kind==='dice'||kind==='reward'){[392,523,659,784,988].forEach((n,i)=>tone(n,now+i*.07,.14,i%2?'triangle':'sine',.055));}
+ if(kind==='house'){tone(330,now,.15,'triangle',.04);tone(659,now+.12,.14,'sine',.05)}
  if(kind==='ride'){[330,493,740,600,920].forEach((n,i)=>tone(n,now+i*.085,.15,i%2?'triangle':'sine',.06))}
 }
 // Original four-song soundtrack, synthesized in real time after the first user gesture.
-function musicTick(){
- if(phase!=='playing'||audioMuted||!audioCtx||audioCtx.state!=='running')return;
- const now=audioCtx.currentTime,track=LEVEL_MUSIC[actOf(save.level)];
- if(musicAt<now-.8)musicAt=now+.025;
- let notes=0;
- while(musicAt<now+.12&&notes++<3){
-  const i=musicStep%16,n=track.melody[i],b=track.bass[i];
-  if(n)tone(n*(1+levelOf(save.power)*.07),musicAt,track.tempo*.78,save.power?'sine':actOf(save.level)===1?'triangle':'sine',save.power?.025:.030);
-  if(b)tone(b,musicAt,track.tempo*1.35,'triangle',.020);
-  if(save.power&&i%4===2)tone(n? n*2:784,musicAt+.045,track.tempo*.56,'sine',.014+levelOf(save.power)*.003);
-  musicAt+=track.tempo;musicStep++;
+// Original, procedural soundtrack. No external audio streams or copyrighted compositions.
+// The four worlds use different harmonic palettes; secret routes and danger alter layers.
+const MUSIC_SCENES={
+ meadow:{lead:'triangle',second:'sine',bass:'triangle',shift:1,volume:.024,percussion:'brush',octave:1},
+ forest:{lead:'sine',second:'triangle',bass:'sawtooth',shift:.75,volume:.020,percussion:'wood',octave:1},
+ sugar:{lead:'square',second:'sine',bass:'triangle',shift:1.5,volume:.014,percussion:'toy',octave:1.5},
+ clock:{lead:'triangle',second:'sawtooth',bass:'sine',shift:.75,volume:.019,percussion:'tick',octave:1}
+};
+const SCENE_IDS=['meadow','forest','sugar','clock'];
+let musicScene='explore',activeScore='explore',musicBlend=1,musicTransitions=0;
+function detectMusicScene(){
+ if(musicScene==='house'||musicScene==='reward')return musicScene;
+ if(phase==='ending')return 'victory';
+ if(phase==='dialogue')return 'story';
+ if(phase!=='playing'||!player||!level)return 'menu';
+ if(boss?.active&&!boss.done)return 'boss';
+ if(player.riding)return player.riding.id.startsWith('bird')?'bird':'snail';
+ if(transport)return 'tube';
+ if(effects.dizzy>0||effects.sway>0||effects.slow>0||effects.silence>0)return 'curse';
+ if(player.route==='cloud')return 'cloud';
+ if(player.route==='depth')return level.routes.find(r=>r.id==='depth')?.kind==='cave'?'cave':'burrow';
+ const danger=level.enemies.some(e=>!e.dead&&Math.abs(e.x-player.x)<320&&Math.abs(e.y-player.y)<110);
+ if(save.hearts===1)return 'critical';
+ if(danger)return 'danger';
+ if(effects.invincible>0||effects.speed>0||save.power&&levelOf(save.power)>=3)return 'power';
+ return 'explore';
+}
+function scoreNote(freq,start,len,wave,volume,soft=false){
+ if(!audioCtx||!freq||!Number.isFinite(freq))return;
+ try{
+  const osc=audioCtx.createOscillator(),amp=audioCtx.createGain(),filter=audioCtx.createBiquadFilter();
+  osc.type=wave;osc.frequency.setValueAtTime(freq,start);
+  filter.type='lowpass';filter.frequency.setValueAtTime(soft?1100:4000,start);
+  amp.gain.setValueAtTime(.0001,start);
+  amp.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),start+.015);
+  amp.gain.exponentialRampToValueAtTime(.0001,start+Math.max(.07,len));
+  osc.connect(filter);filter.connect(amp);amp.connect(audioCtx.destination);
+  osc.start(start);osc.stop(start+Math.max(.08,len)+.01);
+ }catch{/* Headless browser and constrained audio devices may not support audio. */}
+}
+function scorePercussion(scene,i,when,vol){
+ if(scene==='brush'){if(i%4===0)scoreNote(90,when,.09,'sine',vol);if(i%4===2)scoreNote(320,when,.045,'triangle',vol*.36)}
+ if(scene==='wood'){if(i%2===0)scoreNote(i%4===0?118:195,when,.065,'triangle',vol*.65,true)}
+ if(scene==='toy'){if(i%2===0)scoreNote(i%4===0?180:600,when,.045,'square',vol*.26)}
+ if(scene==='tick'){scoreNote(i%2?1040:540,when,.032,'sine',vol*.27)}
+}
+function modeChange(next){
+ if(next===activeScore)return;
+ activeScore=next;musicBlend=0;musicTransitions++;
+ if(audioCtx?.state==='running'&&!audioMuted){
+  const at=audioCtx.currentTime+.025;
+  if(next==='boss')scoreNote(140,at,.38,'sawtooth',.045);
+  if(next==='cloud'||next==='bird')scoreNote(988,at,.30,'sine',.027);
+  if(next==='house')scoreNote(740,at,.24,'triangle',.028);
  }
 }
-function resetMusic(){musicAt=0;musicStep=0}
+function musicTick(){
+ if(audioMuted||!audioCtx||audioCtx.state!=='running')return;
+ const desired=detectMusicScene();modeChange(desired);
+ if(phase==='menu'||phase==='paused')return;
+ const now=audioCtx.currentTime,act=actOf(save.level),style=MUSIC_SCENES[SCENE_IDS[act]||'clock'],base=LEVEL_MUSIC[act]||LEVEL_MUSIC[3];
+ if(musicAt<now-.9)musicAt=now+.04;
+ let scheduled=0;
+ while(musicAt<now+.13&&scheduled++<3){
+  const i=musicStep%16;
+  let n=base.melody[i],b=base.bass[i],tempo=base.tempo;
+  const route=['cloud','bird','cave','burrow','snail','tube'].includes(activeScore);
+  const stressed=['danger','boss','critical'].includes(activeScore);
+  const gag=['curse','house','reward'].includes(activeScore);
+  const tender=activeScore==='story'||activeScore==='victory';
+  tempo*=stressed?.82:route?1.13:tender?1.48:1;
+  musicBlend=Math.min(1,musicBlend+tempo/1.2);
+  const levelGain=.55+.45*musicBlend;
+  const root=activeScore==='cave'||activeScore==='burrow'||activeScore==='snail'?.75:activeScore==='boss'?.85:1;
+  const leadWave=activeScore==='cloud'||activeScore==='bird'||activeScore==='story'?'sine':gag?'triangle':style.lead;
+  if(n&&(activeScore!=='story'||i%2===0)){
+   scoreNote(n*style.octave*root,musicAt,tempo*(tender?1.55:.82),leadWave,style.volume*levelGain*(tender?.62:1));
+   if((i%4===0||activeScore==='power'&&i%2===0)&&!tender){
+     scoreNote(n*style.octave*root*1.5,musicAt+.045,tempo*.8,style.second,style.volume*.39*levelGain);
+   }
+  }
+  if(b)scoreNote(b*(route?.75:1),musicAt,tempo*(route?2.15:1.4),style.bass,style.volume*(stressed?.84:.55)*levelGain,true);
+  if(stressed||activeScore==='power'){
+   if(i%2===0){const pitch=n||base.melody[(i+1)%16]||523;scoreNote(pitch*2,musicAt,tempo*.35,'triangle',style.volume*.32*levelGain)}
+  }
+  if(route&&i%4===2)scoreNote((n||659)*2,musicAt+.035,tempo*1.2,'sine',style.volume*.34*levelGain);
+  if(gag&&i%3===0)scoreNote((n||392)*(.7+Math.sin(i)*.05),musicAt+.02,tempo*.3,'triangle',style.volume*.50*levelGain);
+  if(!tender&&activeScore!=='cloud')scorePercussion(stressed?'toy':style.percussion,i,musicAt,style.volume*1.25*levelGain);
+  if(activeScore==='critical'&&i%4===0)scoreNote(82,musicAt,.19,'sine',.032);
+  musicAt+=tempo;musicStep++;
+ }
+}
+function resetMusic(){musicAt=0;musicStep=0;musicBlend=0}
 function burst(x,y,color,n=18){for(let i=0;i<n;i++){const a=i*Math.PI*2/n+rand(clock*700+i),v=75+rand(i*23+clock)*180;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-60,life:.5+rand(i)*.5,max:.9,color,size:3+rand(i*7)*6})}if(particles.length>220)particles.splice(0,particles.length-220)}
 function toast(text){$('toast').textContent=text;$('toast').classList.add('show');toastUntil=performance.now()+2300}
 function clearInputs(){vxInput.left=vxInput.right=vxInput.jump=false;queuedJump=0;['left','right','jump','special'].forEach(id=>$(id).classList.remove('pressed'))}
@@ -269,7 +350,7 @@ function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABE
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Wähle Katze, Hund, Huhn, Hase oder Fuchs sowie Leicht, Mittel, Schwer oder Ultra. Durchquere 20 lange Retro-Anime-Level mit Wolkenpfaden, Maulwurfsgängen und Tropfsteinhöhlen. Schwingende Schläuche saugen dich in alternative Routen. Mit einem präzisen Sprung von oben kannst du selten einen Vogel oder eine Wand- und Deckenschnecke reiten; mit derselben Sprungtaste springst du ab. Sammle Bronze-, Silber- und Goldmünzen und würfle in Häusern für Kostüme, Leben oder kleine Fähigkeiten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über dem Kopf deiner Spielfigur. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){musicScene='explore';const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const routes=[
  {id:'cloud',label:'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
@@ -442,7 +523,7 @@ function drawAdventure(){
 function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
  if(i%5!==0){resume();return}
  const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
-function resume(){hideOverlay();phase='playing';enterDynamicEncounters();clearInputs();lastFrame=performance.now();musicAt=0}
+function resume(){musicScene='explore';hideOverlay();phase='playing';enterDynamicEncounters();clearInputs();lastFrame=performance.now();musicAt=0}
 function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard('PAUSE · EINE KATZE MUSS MAL SITZEN','Miau-Pause','🐱 ☕ 🌸',`Kapitel ${save.level+1}: ${CHAPTERS[save.level].name}. Gesammelte Pilze: ${save.collected.length}/${TOTAL}. Dein Fortschritt ist gespeichert.`,[
  {label:'▶ Weiterhüpfen',action:resume},
  {label:'↩ Kapitel neu starten',action:()=>enterLevel(save.level)},
@@ -474,7 +555,7 @@ function endChoice(){if(phase!=='playing')return;dialog({tag:'FINALE · DEINE EN
  {label:'🌸 Zeit freigeben – Veränderung wagen',action:()=>ending('release')},
  {label:'🌙 Alles für immer bewahren – den Moment einfrieren',action:()=>ending('freeze')}
  ]})}
-function ending(choice){save.flags.finalChoice=choice;save.won=true;let type,title,body;
+function ending(choice){musicScene='victory';save.flags.finalChoice=choice;save.won=true;let type,title,body;
  if(choice==='freeze'){type='MOND-ENDE';title='Ein schnurrender Augenblick';body='Die Zeit steht still. Alle Katzen genießen ewig dieselbe Teestunde. Problem: Der Tee ist nach vier Milliarden Schlucken noch immer lauwarm. Momo lernt, dass auch perfekte Tage manchmal weitergehen sollten.'}
  else if(save.collected.length===TOTAL&&save.flags.helpedMiso&&save.flags.trustedQueen&&save.flags.readLetter&&save.flags.kindShadow){type='WAHRES STERNEN-ENDE';title='Sieben Pilze und neun Leben';body='Du hast alle sieben Pilze gefunden, Miso gerettet, Dahlia vertraut und Zukunfts-Momo vergeben! Der Wald erblüht. Pip eröffnet eine Nachrichtenagentur, die erstmals Fakten prüft. Und Miso bestellt eine Pizza. Mit Pilzen. Wahnsinn!'}
  else if(save.collected.length===TOTAL){type='REGENBOGEN-ENDE';title='Die Farben kehren zurück';body='Alle sieben Pilze leuchten gleichzeitig! Die Uhr erwacht. Die Blumen blühen wieder, Dahlia lässt die Farben frei, und Momo wird zur offiziellen Heldin der königlichen Snackabteilung.'}
@@ -491,6 +572,7 @@ function pickCoin(coin){
  sound('pick');persist();updateUI();return true;
 }
 function awardDice(house){
+ musicScene='reward';sound('dice');
  const roll=1+Math.floor(Math.random()*6),name=hero().name;
  let reward='',portrait='🎲';
  if(roll===1){save.hearts=Math.min(diff().hearts,save.hearts+2);reward='💗 Zwei Herzen für '+name+'!';}
@@ -503,6 +585,7 @@ function awardDice(house){
 }
 function visitHouse(house){
  if(house.used||phase!=='playing')return;
+ musicScene='house';sound('house');
  house.cooldown=12;player.vx=0;
  dialog({tag:'HAUS DER WÜRFELNAGETIERE',title:'Hereinspaziert zum Katzenwürfeln!',portrait:'🏠 🎲 🐭',body:hero().name+' betritt die Glückshütte! Ein würfelnder Hamster fragt: »10 Münzen für eine Überraschung?« Du hast '+save.coins+' Münzen. Zu gewinnen: Leben, Herzen, Münzen, lustige Kleidung oder kleine Fähigkeiten.',
  options:[{label:'🎲 10 Münzen einsetzen!',action:()=>{if(save.coins<10){dialog({tag:'ZU WENIG MÜNZEN',title:'Pleite-Pfötchen!',portrait:'🐹 🪙',body:'Du brauchst zehn Münzen. Der Hamster akzeptiert leider keine Keksbrösel.',options:[{label:'🐾 Wieder hinaus',action:resume}]})}else{save.coins-=10;awardDice(house)}}},
@@ -1053,6 +1136,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
  stage.addEventListener('contextmenu',e=>e.preventDefault());resize();updateUI();menu();requestAnimationFrame(frame);
  // A narrow, opt-in interface for automated browser regression tests; not active in normal play.
  if(new URLSearchParams(location.search).has('test'))window.__katzigamiTest={
+  musicMode:()=>detectMusicScene(),musicState:()=>({mode:detectMusicScene(),active:activeScore,transitions:musicTransitions,world:SCENE_IDS[actOf(save.level)]}),
   mystery:()=>mystery().name,seed:()=>save.seed,
   newCampaign:()=>{save=defaultSave();persist();enterLevel(0,false)},
   chat:(text,name='Pip')=>applyConversation(name,text),
