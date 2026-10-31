@@ -58,8 +58,11 @@ with sync_playwright() as P:
  # A real projectile must eliminate a shadow-cat on collision (not just animate).
  page.evaluate('window.__katzigamiTest.enterLevel(0)')
  page.evaluate('window.__katzigamiTest.takePower()')
- page.evaluate('window.__katzigamiTest.position(520,390)')
- page.evaluate('window.__katzigamiTest.step(.45)')
+ page.evaluate('window.__katzigamiTest.step(.2)')
+ # Aim relative to the actual moving enemy; enemy locations vary with each seed.
+ target=snap(page)['enemies'][0]['x']
+ page.evaluate('(x)=>window.__katzigamiTest.position(x-95,390)',target)
+ page.evaluate('window.__katzigamiTest.step(.04)')
  assert page.evaluate('window.__katzigamiTest.cast()'), 'Cannot cast for enemy collision check'
  page.evaluate('window.__katzigamiTest.step(.45)')
  assert snap(page)['enemies'][0]['dead'], 'Magic projectile did not hit nearby shadow-cat'
