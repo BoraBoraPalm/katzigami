@@ -702,7 +702,7 @@ function newConversation(){
  const chooseGlobal=globalLeft&&(!areaLeft||campaignVar(seen.length*179+save.level*19)>.76);
  return (chooseGlobal?drawNewDialogue('scene-wandering',WANDERING_DIALOGUES):drawNewDialogue('scene-'+biome,preferred))
     ||drawNewDialogue('scene-wandering',WANDERING_DIALOGUES)
-    ||Object.entries(WORLD_DIALOGUES).map(([id,pool])=>drawNewDialogue('scene-'+id,pool)).find(Boolean);
+    ||(()=>{for(const [id,pool] of Object.entries(WORLD_DIALOGUES)){const next=drawNewDialogue('scene-'+id,pool);if(next)return next}return null})();
 }
 function talkWithCat(){
  if(phase!=='playing'||!level||!player)return;
@@ -1012,22 +1012,24 @@ function friendMeeting(){
  if(Math.abs(player.x+player.w*.5-v.x)>47)return;
  v.status='talking';
  const state=friendState(v.name),wounded=v.injury&&!state.healed;
- const intro=state.meetings>0?'»Da bist du ja wieder!« ':'»Endlich begegnen wir uns!« ';
+ const greeting=drawNewDialogue('friend-intro-'+v.name,FRIEND_GREETING_VARIATIONS[v.name]||FRIEND_GREETING_VARIATIONS.Pip);
+ const intro=(state.meetings>0?'»Da bist du ja wieder!« ':'»Endlich begegnen wir uns!« ')+(greeting?.entry||'Ich bin froh, dass du da bist.')+' ';
+ const choice=drawNewDialogue('friend-choice',wounded?INJURY_CHOICE_VARIANTS:FRIEND_CHOICE_VARIANTS)?.entry||FRIEND_CHOICE_VARIANTS[0];
  state.meetings++;save.friendEncounters.push(v.id);persist();
  if(wounded){
   state.injured=true;persist();
   const text=intro+v.name+' liegt verletzt am Weg. Nox’ Wachkatzen haben die Pfote getroffen. Für '+HEAL_COST+' Münzen könnte ein Heilkraut helfen. Du hast '+save.coins+' Münzen. Wenn du nicht hilfst, bleibt der Freund zurück und verliert Vertrauen.';
   dialog({tag:'💔 VERLETZTER FREUND',title:v.name+' braucht dich!',portrait:'🐈‍⬛ 🩹 💔',body:text,
-   options:[{label:'💗 Für '+HEAL_COST+' Münzen heilen',action:()=>healFriend(v)},
-    {label:'🔎 Nur nach einem Hinweis fragen',action:()=>{state.trust--;persist();v.status='departed';toast(FRIEND_ROSTER[v.name].hint);resume()}},
-    {label:'🐾 Weitergehen – Münzen behalten',action:()=>{state.trust-=2;persist();v.status='departed';resume();toast(v.name+' schaut dir traurig hinterher.')}}]});
+   options:[{label:choice[0],action:()=>healFriend(v)},
+    {label:choice[1],action:()=>{state.trust--;persist();v.status='departed';toast(FRIEND_ROSTER[v.name].hint);resume()}},
+    {label:choice[2],action:()=>{state.trust-=2;persist();v.status='departed';resume();toast(v.name+' schaut dir traurig hinterher.')}}]});
  }else{
   const lore=FRIEND_ROSTER[v.name];
   dialog({tag:'🐾 WIEDERSEHEN · '+v.name.toUpperCase(),title:v.name+' ist zurück!',portrait:'🐱 '+lore.icon+' 🌸',
    body:intro+v.name+': »'+lore.hint+'« Begleite ich dich ein Stück? Vielleicht entdecken wir zusammen eine geheime Münzspur.',
-   options:[{label:'🤝 Ein Stück gemeinsam reisen',action:()=>joinFriend(v)},
-    {label:'🗝 Nur ein Geheimnis erfahren',action:()=>{state.secrets++;state.trust++;v.status='departed';persist();resume();toast(lore.secret)}},
-    {label:'🐾 Allein weitergehen',action:()=>{v.status='departed';resume()}}]});
+   options:[{label:choice[0],action:()=>joinFriend(v)},
+    {label:choice[1],action:()=>{state.secrets++;state.trust++;v.status='departed';persist();resume();toast(lore.secret)}},
+    {label:choice[2],action:()=>{v.status='departed';resume()}}]});
  }
 }
 function healFriend(v){
@@ -1257,6 +1259,40 @@ const FRIEND_GREETING_VARIATIONS={
  'Dahlia zeigt dir einen Brief, den sie nie an Pip abgeschickt hat.'
  ]
 };
+const FRIEND_CHOICE_VARIANTS=[
+ ['🤝 Ich bleibe ein Stück an deiner Seite!','🗝 Welches Geheimnis hast du entdeckt?','🐾 Wir treffen uns später wieder'],
+ ['🤝 Zusammen nehmen wir den sicheren Pfad','🔎 Erzähl mir die verborgene Spur!','🌙 Ich erkunde erst einmal allein'],
+ ['💗 Lass uns gemeinsam weiterziehen','🧭 Zeig mir deinen geheimen Hinweis','🍃 Ich gehe heute meinen eigenen Weg'],
+ ['🐱 Komm mit, zwei Pfotenpaare sehen mehr','🗺 Was steht nicht auf der Karte?','👋 Bis zur nächsten Weggabelung'],
+ ['✨ Wir gehen zusammen zum nächsten Pilz','📜 Was verschweigt uns Nox?','🐾 Ich folge der anderen Fährte'],
+ ['🤝 Für ein Stück sind wir ein Team','🔍 Was hast du unterwegs herausgefunden?','🌿 Ich warte lieber nicht'],
+ ['💛 Gut, wenn du jetzt bei mir bleibst','🗝 Kennst du einen geheimen Eingang?','👣 Mein Weg führt heute woanders hin'],
+ ['🐾 Dann gehen wir gemeinsam los!','🧭 Wo führen diese ungewöhnlichen Spuren hin?','🌼 Ich schaue mich selbst um'],
+ ['🤝 Schließ dich meiner Reise an','📖 Was erzählt man über die Herzuhr?','🌙 Wir sehen uns hoffentlich wieder'],
+ ['🌸 Gemeinsam schaffen wir die nächste Strecke','🔍 Wer war vor uns an diesem Ort?','👋 Ich probiere es erst allein'],
+ ['🤝 Du und ich gegen die Schattenwachen','🗺 Gibt es hier eine versteckte Abkürzung?','🍄 Ich suche noch Pilze auf eigene Faust'],
+ ['💗 Komm, ich pass auf uns beide auf','📜 Was steht in deinem geheimen Brief?','👣 Ich brauche einen Moment für mich'],
+ ['🐾 Eine Etappe teilen wir uns','🧭 Welcher Weg sieht nur harmlos aus?','🌿 Ich nehme die andere Richtung'],
+ ['🤝 Begleite mich bis zum nächsten Wegzeichen','🔎 Hast du Nox’ Siegel irgendwo gesehen?','👋 Gute Reise, wir treffen uns wieder'],
+ ['✨ Mit dir ist die Reise weniger einsam','🗝 Gibt es eine verborgene Kammer?','🌙 Heute lasse ich mich lieber treiben'],
+ ['💗 Wir halten heute zusammen','📖 Was hast du über Dahlia erfahren?','🍃 Ich suche allein nach Antworten'],
+ ['🐱 Zwei Abenteurer sind besser als einer','🔍 Wo hat Pip sich geirrt?','👣 Ich muss zuerst etwas anderes prüfen'],
+ ['🤝 Ich brauche jemanden, dem ich vertraue','🗺 Welche Spur führt zu den Glocken?','👋 Danke, ich komme später wieder'],
+ ['🐾 Komm mit bis zum nächsten Geheimnis','📜 Was hat der Uhrmeister vergessen?','🌼 Ich muss erst die Gegend erkunden'],
+ ['✨ Bleib noch ein Stück bei mir','🔎 Wer kennt diese seltsame Melodie?','🌙 Ich gehe lieber in die andere Richtung'],
+ ['💛 Wir bringen uns gegenseitig weiter','🗝 Welcher Schatz ist kein Schatz?','🍄 Der nächste Pilz wartet auf mich'],
+ ['🤝 Gemeinsam entdecken wir sicher mehr','🧭 Wohin zeigen die Schatten?','👣 Ich möchte erst alleine suchen'],
+ ['🐱 Ich bin froh, dich wiederzusehen – komm!','📜 Was war in diesem versiegelten Umschlag?','👋 Bis zum nächsten Wiedersehen'],
+ ['💗 Ein Freund an der Seite schadet nie','🔍 Kannst du das Geräusch erklären?','🌿 Ich will den stillen Pfad versuchen']
+];
+const INJURY_CHOICE_VARIANTS=[
+ ['💗 Für 150 Münzen das Heilkraut besorgen','🔍 Nur nach dem versteckten Hinweis fragen','🐾 Den Freund vorerst zurücklassen'],
+ ['🌿 150 Münzen zahlen und die Pfote versorgen','🧭 Zuerst nach einem Geheimweg fragen','👣 Die Münzen behalten und weiterziehen'],
+ ['💖 150 Münzen für die Heilung einsetzen','🔎 Ein letztes Geheimnis erfahren','🌙 Alleine in die Nacht weitergehen'],
+ ['🩹 Mit 150 Münzen die Wunden heilen','📜 Nur die wichtige Nachricht anhören','🍃 Den Weg ohne Begleitung fortsetzen'],
+ ['💗 Die 150 Münzen für Medizin ausgeben','🔍 Nach einer sicheren Abkürzung fragen','👋 Hoffen, dass ein anderer hilft'],
+ ['🌸 150 Münzen für den Freund opfern','🗝 Einen Hinweis erbitten und gehen','🐾 Mit den Münzen verschwinden']
+];
 const NEW_REACTION_LINES={
  kind:[
   'Ich hätte nicht gedacht, dass heute jemand freiwillig hilft. Mein geheimer Weg gehört dir.',
@@ -1357,7 +1393,7 @@ function startDialog(i){
    toast(name+(index===0?' beginnt seine eigene Spur!':' macht sich entschlossen auf den Weg!'));
   }}));
   dialog({tag:'PROLOG · DAS GESTOHLENE MORGEN',
-    title:title,portrait:hero().icon+' 🌸 🕰️',
+    title:name+' · '+title,portrait:hero().icon+' 🌸 🕰️',
     body:escapeText(openingForHero()+' '+event+common),options:choices});
   return;
  }
