@@ -153,6 +153,7 @@ function sound(kind){if(audioMuted)return;let now;try{audioCtx??=new (window.Aud
  if(kind==='transform'){[392,523,659,784,1046,1318,1568].forEach((n,i)=>tone(n,now+i*.085,.27,i%2?'triangle':'sine',.10))}
  if(kind==='cast'){tone(650,now,.10,'sine',.055,1150);tone(330,now+.05,.14,'triangle',.04,760)}
  if(kind==='break'){[780,560,390].forEach((n,i)=>tone(n,now+i*.075,.18,'triangle',.08))}
+ if(kind==='ride'){[330,493,740,600,920].forEach((n,i)=>tone(n,now+i*.085,.15,i%2?'triangle':'sine',.06))}
 }
 // Original four-song soundtrack, synthesized in real time after the first user gesture.
 function musicTick(){
@@ -620,7 +621,7 @@ function startRide(m){
  if(player.riding||m.rest>0||transport||phase!=='playing'||player.route!==m.route)return false;
  player.riding={id:m.id,left:m.rideTime};
  player.grounded=false;player.vx=0;player.vy=0;player.inv=1.2;queuedJump=0;
- burst(m.x,m.y,m.kind==='bird'?'#d3f6ff':'#f1d4aa',24);sound('transform');
+ burst(m.x,m.y,m.kind==='bird'?'#d3f6ff':'#f1d4aa',24);sound('ride');
  toast(m.kind==='bird'?'🐦 JIPPI! Auf dem Wolkenvogel!':'🐌 WAHNSINN! Wand-Schnecke, sogar kopfüber!');
  return true;
 }
@@ -629,8 +630,10 @@ function updateRiding(dt){
  const m=level.mounts.find(v=>v.id===ride.id);
  if(!m){player.riding=null;return false}
  ride.left=Math.max(0,ride.left-dt);
- player.x=clamp(m.x-player.w*.5,0,level.width-player.w);
- player.y=m.y-(m.kind==='bird'?65:70);
+ // Rotate the passenger around the snail's shell on walls and ceilings.
+ const angle=m.kind==='snail'?(m.angle||0):0;
+ player.x=clamp(m.x+Math.sin(angle)*57-player.w*.5,0,level.width-player.w);
+ player.y=m.y-Math.cos(angle)*61-player.h*.5;
  player.vx=0;player.vy=0;player.inv=Math.max(player.inv,.35);player.grounded=false;
  if(queuedJump>0||ride.left<=0){
   player.riding=null;m.rest=4;queuedJump=0;
@@ -1025,7 +1028,12 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
  for(const m of level.mounts)drawMount(m);
  drawGate();
  if(isFinal(level.index)&&boss&&!boss.done&&boss.triggered){const x=boss.x+Math.sin(clock*1.3)*60-cam;drawCat(x+13,432,1.17,'shadow',Math.sin(clock*3)*2,-1);if(boss.active){ctx.font='25px Nunito';ctx.fillStyle='#fff';ctx.fillText('👑 SPIEGEL-MOMO',x-30,323);round(x-33,340,108,10,5,'#463353');round(x-31,342,104*boss.hp/boss.maxHp,6,3,'#fb98b5')}}
- if(player&&(player.inv<=0||Math.floor(clock*14)%2===0)){const run=player.grounded&&Math.abs(player.vx)>30;const bob=run?Math.abs(Math.sin(player.runCycle))*4:Math.sin(clock*3)*1.5;drawHero(player.x+player.w/2-cam,player.y+player.h*.54,bob)}
+ if(player&&(player.inv<=0||player.riding||Math.floor(clock*14)%2===0)){
+  const run=player.grounded&&Math.abs(player.vx)>30,bob=run?Math.abs(Math.sin(player.runCycle))*4:Math.sin(clock*3)*1.5;
+  const mx=player.x+player.w/2-cam,my=player.y+player.h*.54;
+  ctx.save();if(player.riding){const m=level.mounts.find(x=>x.id===player.riding.id);if(m?.kind==='snail'){ctx.translate(mx,my);ctx.rotate(m.angle||0);ctx.translate(-mx,-my)}}
+  drawHero(mx,my,bob);ctx.restore()
+ }
  drawEffects();drawStatusTimers();ctx.restore();
  if(powerFlash>0){ctx.save();ctx.globalAlpha=powerFlash*.14;ctx.fillStyle=POWERS[save.power]?.color||'#fff';ctx.fillRect(0,0,viewW,HEIGHT);ctx.restore()}
  ctx.restore()}
@@ -1064,6 +1072,8 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   damageEnemy:(id,damage=1)=>{const e=level.enemies.find(e=>e.id===id);return e?hitEnemy(e,damage,e.x,e.y):false},
   damageBoss:(damage=1)=>hitBoss(damage,boss.x,boss.y),
   mount:(kind)=>{const m=level.mounts.find(x=>x.kind===kind);if(!m)return false;player.route=m.route;player.x=m.x-player.w/2;player.y=m.y-100;return startRide(m)},
+  precisionLanding:(kind)=>{const m=level.mounts.find(x=>x.kind===kind);if(!m)return false;
+   player.route=m.route;player.riding=null;player.tubeCooldown=3;player.x=m.x-player.w/2;player.y=m.y-130;player.vy=300;player.vx=0;player.grounded=false;player.inv=3;return true},
   giveCharm:(kind)=>{if(!CHARMS[kind])return false;takeCharm({kind,x:player.x+20,y:player.y+20,taken:false});return true},
   givePower:(name)=>{if(!POWERS[name])return false;transform({id:name,x:player.x+20,y:player.y+20,taken:false});return true},
   clearSave:()=>localStorage.removeItem(SAVE_KEY)
