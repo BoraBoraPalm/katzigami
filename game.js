@@ -1135,7 +1135,33 @@ function drawEnemy(e){if(e.dead)return;const type=ENEMY_TYPES[e.type],x=e.x-cam+
  enemyFinery(e,x,y);
  if(e.maxHp>1){const w=56,h=7,top=y-(e.type==='witch'?104:e.type==='titan'?95:75);round(x-w/2,top,w,h,3,'#513c69');round(x-w/2+2,top+1,(w-4)*e.hp/e.maxHp,h-2,3,e.hp/e.maxHp>.33?'#f9a1b8':'#ffcc73')}
  ctx.restore()}
-function drawNPC([x,name,speech,kind]){if(x<cam-70||x>cam+viewW+70)return;drawCat(x-cam,407,.85,kind,Math.sin(clock*2+x)*2,1);ctx.save();ctx.font='bold 13px Nunito, sans-serif';const w=Math.min(220,ctx.measureText(name+' ♥').width+24);round(x-cam-w/2,324,w,26,12,'#fff6ec','#f3bbd5',2);ctx.fillStyle='#b16c94';ctx.textAlign='center';ctx.fillText(name+' ♥',x-cam,343);ctx.restore();if(player&&Math.abs(player.x-x)<155&&phase==='playing'&&speech){ctx.save();ctx.font='800 12px Nunito, sans-serif';const parts=wrapText(speech,215);const width=235,h=parts.length*17+15;round(clamp(x-cam-width/2,5,Math.max(5,viewW-width-5)),254-(h-32),width,h,13,'#fffaf3','#bba3be',2);ctx.textAlign='center';ctx.fillStyle='#755f7a';parts.forEach((s,k)=>ctx.fillText(s,clamp(x-cam,5+width/2,Math.max(5+width/2,viewW-5-width/2)),268-(h-32)+k*17));ctx.restore()}}
+function drawNpcAccents(name,x,y){
+ ctx.save();ctx.translate(x,y);ctx.globalAlpha=.96;
+ if(name==='Pip'){
+  // Courier satchel and a deliberately over-sized postal beret.
+  round(-16,-62,32,13,6,'#c1e6b1','#6b9d90',2);
+  ctx.beginPath();ctx.moveTo(-27,-58);ctx.lineTo(0,-81);ctx.lineTo(19,-55);ctx.closePath();ctx.fillStyle='#608879';ctx.fill();
+  ctx.strokeStyle='#9d7182';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-16,-1);ctx.lineTo(22,31);ctx.stroke();
+  round(13,20,26,21,5,'#e5bb8a','#ae806b',2);
+  ctx.font='bold 13px serif';ctx.fillStyle='#765d71';ctx.fillText('✉',18,35);
+ }else if(name==='Dahlia'){
+  // Queen's crown and delicate shawl; ambiguity without villain caricature.
+  const g=ctx.createLinearGradient(0,-90,0,-43);g.addColorStop(0,'#fff6c4');g.addColorStop(1,'#be9d78');
+  ctx.beginPath();ctx.moveTo(-26,-56);ctx.lineTo(-26,-82);ctx.lineTo(-13,-67);ctx.lineTo(0,-93);ctx.lineTo(13,-67);ctx.lineTo(25,-82);ctx.lineTo(26,-56);ctx.closePath();ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#fff5e7';ctx.lineWidth=2;ctx.stroke();
+  ellipse(0,-64,6,5,'#db8db7');ctx.strokeStyle='#dfc8e8';ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,5,23,.1,Math.PI-.1);ctx.stroke();
+ }else if(name==='Yuki'){
+  // Botanist with a leaf diadem and pale green explorer sash.
+  ctx.strokeStyle='#e9f4ca';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-18,-10);ctx.lineTo(17,19);ctx.stroke();
+  for(let k=-1;k<=1;k++)ellipse(k*16,-65+(k%2)*7,12,6,'#9cd2b1',k*.24);
+  ellipse(0,-68,3,4,'#ffe7b4');
+ }else if(name==='Miso'){
+  // Little hero carries a lantern and a patched adventure scarf.
+  drawRibbon(0,-10,'#f0b38a');
+  line(24,5,33,31,'#aa7989',3);ellipse(36,33,10,15,'#fff0ba');ellipse(36,35,4,5,'#ffd780');
+ }
+ ctx.restore();
+}
+function drawNPC([x,name,speech,kind]){if(x<cam-70||x>cam+viewW+70)return;drawCat(x-cam,407,.85,kind,Math.sin(clock*2+x)*2,1);drawNpcAccents(name,x-cam,407);ctx.save();ctx.font='bold 13px Nunito, sans-serif';const w=Math.min(220,ctx.measureText(name+' ♥').width+24);round(x-cam-w/2,324,w,26,12,'#fff6ec','#f3bbd5',2);ctx.fillStyle='#b16c94';ctx.textAlign='center';ctx.fillText(name+' ♥',x-cam,343);ctx.restore();if(player&&Math.abs(player.x-x)<155&&phase==='playing'&&speech){ctx.save();ctx.font='800 12px Nunito, sans-serif';const parts=wrapText(speech,215);const width=235,h=parts.length*17+15;round(clamp(x-cam-width/2,5,Math.max(5,viewW-width-5)),254-(h-32),width,h,13,'#fffaf3','#bba3be',2);ctx.textAlign='center';ctx.fillStyle='#755f7a';parts.forEach((s,k)=>ctx.fillText(s,clamp(x-cam,5+width/2,Math.max(5+width/2,viewW-5-width/2)),268-(h-32)+k*17));ctx.restore()}}
 function wrapText(text,max){const words=text.split(' '),lines=[];let l='';for(const word of words){const t=l?l+' '+word:word;if(ctx.measureText(t).width>max&&l){lines.push(l);l=word}else l=t}if(l)lines.push(l);return lines}
 function drawCat(x,y,s=1,kind='cream',bob=0,facing=1,motion=null){const palettes={cream:['#fff4df','#f5d7bb','#75587a'],shadow:['#6d587e','#9b81ae','#fff7ed'],lilac:['#cfb8f9','#ac8ae0','#664b79'],peach:['#ffc7b8','#f3a5aa','#725578'],rose:['#f2b0c9','#d990b8','#775072'],ginger:['#ffcf8f','#f5a878','#765271']};let [fur,trim,ink]=palettes[kind]||palettes.cream;
  const running=motion&&motion.grounded&&Math.abs(motion.vx)>28,airborne=motion&&!motion.grounded,cycle=motion?motion.runCycle:clock*4;
