@@ -312,7 +312,7 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  if(act===1&&save.flags.helpedMiso)platforms.push({x:1135,y:350,w:245,h:24,ground:false,helper:true});
  if(act===2&&save.flags.trustedQueen)platforms.push({x:1720,y:345,w:300,h:24,ground:false,helper:true});
  const charms=[];
- const keys=Object.keys(CHARMS);
+ const keys=Object.keys(CHARMS).filter(k=>k!=='dizzy'); // Tube dizziness is transport-only, not a random loot curse.
  for(let j=0;j<8+Math.floor(i/3);j++){
   let x=Math.round(490+(j+1)*(d.width-880)/(9+Math.floor(i/3))+campaignVar(i*303+j)*90);
   if(d.gaps.some(([a,b])=>x>a-80&&x<b+75))x+=190;
