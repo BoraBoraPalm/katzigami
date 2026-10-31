@@ -1366,6 +1366,8 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
  // A narrow, opt-in interface for automated browser regression tests; not active in normal play.
  if(new URLSearchParams(location.search).has('test'))window.__katzigamiTest={
   musicMode:()=>detectMusicScene(),musicState:()=>({mode:detectMusicScene(),active:activeScore,transitions:musicTransitions,world:SCENE_IDS[actOf(save.level)]}),
+  previewCostume:(key,character)=>{if(!Object.hasOwn(COSTUMES,key))return null;if(character&&Object.hasOwn(HEROES,character))save.character=character;save.outfit=key;persist();return prizeName(key)},
+  testReward:(number=4)=>{const prior=Math.random;Math.random=()=>Math.max(0,Math.min(.999,(number-.5)/6));try{awardDice({id:'test-reward-'+save.level+'-'+number,used:false})}finally{Math.random=prior}return {costume:save.outfit,coins:save.coins,life:save.lives}},
   mystery:()=>mystery().name,seed:()=>save.seed,
   newCampaign:()=>{save=defaultSave();persist();enterLevel(0,false)},
   chat:(text,name='Pip')=>applyConversation(name,text),
