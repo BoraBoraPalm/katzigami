@@ -1,5 +1,5 @@
 /* Optional offline shell for installable mobile gameplay (same-origin assets only). */
-const VERSION = 'katzigami-paw-5-dynamic';
+const VERSION = 'katzigami-paw-6-retro';
 const FILES = ['./','./index.html','./style.css','./game.js','./manifest.webmanifest','./favicon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
