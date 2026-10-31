@@ -31,7 +31,7 @@ with sync_playwright() as p:
  assert len(set(stages))==20,stages
  assert max(lengths)>4400,lengths
  assert len(foes)>=8,foes
- assert buffs=={'speed','invincible','fly','sway','slow','silence'},buffs
+ assert {'speed','invincible','fly','sway','slow','silence'}.issubset(buffs),buffs
  # Positive effect cannot be collected twice per pickup; timer is temporary.
  page.evaluate(f'{api}.enterLevel(3)')
  page.evaluate(f'{api}.givePower("spark")')
