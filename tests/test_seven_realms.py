@@ -45,7 +45,7 @@ with sync_playwright() as p:
  start=len(snap()['enemies'])
  call('position(711,390)')
  step(3)
- assert len(snap()['enemies'])>start,'Door ambush failed to spawn a ghost'
+ assert len(snap()['enemies'])>start,('Door ambush failed',snap()['phase'],start,len(snap()['enemies']),call('realmState().events')[:4],snap()['player'])
  # Snow: immersion has a real hypothermia timer, not merely snow art.
  call('enterLevel(3)')
  call('position(1205,530)')
