@@ -1014,7 +1014,7 @@ function friendMeeting(){
  const state=friendState(v.name),wounded=v.injury&&!state.healed;
  const greeting=drawNewDialogue('friend-intro-'+v.name,FRIEND_GREETING_VARIATIONS[v.name]||FRIEND_GREETING_VARIATIONS.Pip);
  const intro=(state.meetings>0?'»Da bist du ja wieder!« ':'»Endlich begegnen wir uns!« ')+(greeting?.entry||'Ich bin froh, dass du da bist.')+' ';
- const choice=drawNewDialogue('friend-choice',wounded?INJURY_CHOICE_VARIANTS:FRIEND_CHOICE_VARIANTS)?.entry||FRIEND_CHOICE_VARIANTS[0];
+ const choice=drawNewDialogue(wounded?'friend-injury-choice':'friend-choice',wounded?INJURY_CHOICE_VARIANTS:FRIEND_CHOICE_VARIANTS)?.entry||FRIEND_CHOICE_VARIANTS[0];
  state.meetings++;save.friendEncounters.push(v.id);persist();
  if(wounded){
   state.injured=true;persist();
