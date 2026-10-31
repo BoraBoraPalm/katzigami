@@ -8,7 +8,7 @@ Ein eigenständiges, kostenloses Katzen-Jump-'n'-Run für Handys und Desktop. Vi
 
 - **Handy:** Linke Daumentasten `◀` / `▶` zum Laufen, rechte große Taste `HÜPF!` zum Springen. Die neue **Magietaste unmittelbar links daneben** ist erst nach dem Aufsammeln eines speziellen Verwandlungspilzes aktiv. Original-Lauf- und Sprungtasten bleiben unverändert groß und an ihrem bisherigen Platz. Für größere Sprünge gedrückt halten. Querformat empfohlen, Hochformat funktioniert ebenfalls.
 - **PC:** `A`/`D` oder Pfeiltasten zum Laufen, `Leertaste`, `W` oder `↑` zum Springen. `X` oder `J` aktiviert die Spezialfähigkeit nach einer Verwandlung, `Esc` pausiert.
-- **Pilze:** Berühren, um sie einzusammeln. Die sieben Orakelpilze sind reine Sammelobjekte. Die vier leuchtenden Verwandlungspilze (je einer pro Level) schalten **Blütenpfote**, **Funkelpfote**, **Mondpfote** bzw. **Sternenpfote** frei. Die zugehörige Spezialtaste zaubert Projektile, die Schattenkatzen und den Boss treffen können. Upgrades bleiben nach Treffern dauerhaft erhalten; Treffer kosten nur Herzen. An Checkpoint-Blumen wird automatisch gespeichert. Auf kleine Schattenkatzen kannst du springen.
+- **Pilze:** Berühren, um sie einzusammeln. Die sieben Orakelpilze sind reine Sammelobjekte. Die besonderen leuchtenden Verwandlungspilze (wiederholt über vier Welten verteilt) schalten **Blütenpfote**, **Funkelpfote**, **Mondpfote** bzw. **Sternenpfote** frei. Die zugehörige Spezialtaste zaubert Projektile, die Schattenkatzen und den Boss treffen können. Upgrades bleiben nach Treffern dauerhaft erhalten; Treffer kosten nur Herzen. An Checkpoint-Blumen wird automatisch gespeichert. Auf kleine Schattenkatzen kannst du springen.
 - **Story:** Entscheidungen werden in den Spielstand aufgenommen und verändern die folgenden Level, den Bosskampf und das Ende.
 
 ## Geschichte
@@ -48,7 +48,7 @@ Das Projekt ist öffentlich zugänglich. Der Quellcode enthält ausschließlich 
 - Bei jeder Katzenbegegnung kann man zwischen vorbereiteten Antworten wählen **oder eigene Sätze eintippen**. Die Offline-Dialoglogik erkennt grob Freundlichkeit, Neugier, Kampfeslust, Humor, Misstrauen und eigene Ideen. Beziehungen und Antworten werden gespeichert. Verbündete bauen zusätzliche Brücken, Rivalen rufen zusätzliche Gegner.
 - Gegner haben lokale taktische KI (Regelsteuerung): Beobachten, Verfolgen, Ausweichen und zielende Angriffe. Keine Netzwerkverbindung und keine Sprachmodell-API nötig.
 - **Technische Klarstellung:** Die freien Antworten werden bisher mit einem lokalen Schlüsselwort-/Regelsystem interpretiert; sie sind **keine generativen Antworten eines KI-Sprachmodells**. Unbegrenzte frei erfundene Reaktionen würden einen sicheren Backend-Proxy und einen separaten KI-Dienst erfordern, dessen Zugangsdaten niemals in ein öffentliches GitHub-Pages-Repository gehören.
-- Die Welt wird absichtlich **nicht vollständig zufällig** erzeugt: die vier Kapitel und die wichtigen Pilze bleiben spielbar und erreichbar, wichtige Storyereignisse erhalten Varianten und zusätzliche Konsequenzen.
+- Die Welt wird absichtlich **nicht vollständig zufällig** erzeugt: die zwölf Level und die wichtigen Pilze bleiben spielbar und erreichbar, wichtige Storyereignisse erhalten Varianten und zusätzliche Konsequenzen.
 ## Retro-Anime-Kampagne: 12 Level
 
 - Vier Themenwelten mit je drei längeren, unterschiedlich gestalteten Abschnitten; insgesamt zwölf Level.
