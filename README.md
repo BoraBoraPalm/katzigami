@@ -1,17 +1,21 @@
 # 🐱 KATZIGAMI 🌸
-### Das Pilzorakel – ein kunterbuntes Retro-Anime-Katzenabenteuer!
+### Das gestohlene Morgen – ein Retro-Anime-Abenteuer
 
 **🎮 [Jetzt am Handy spielen!](https://boraborapalm.github.io/katzigami/)**
 
 **🌸 20 lange Level** · **🌈 4 Welten mit Wolken- & Höhlenwegen** · **😼 13 Gegnertypen** · **🍄 7 Orakelpilze**
 
-Wähle **🐱 Momo, 🐶 Bello, 🐔 Kiki, 🐰 Luna oder 🦊 Fips** – gleich stark, aber mit unterschiedlichen Angriffsstilen. Erkunde versteckte Pfade, triff schräge Tiere und entscheide selbst, wie die Geschichte ausgeht!
+**🕰️ Story:** Uhrmeister **Nox** hält die Zeit an. Sammle sieben Pilze, decke Pips Lügen auf und entscheide, ob Königin Dahlia und Spiegel-Momo Verbündete oder Gegner sind.
+
+**🐱 Momo · 🐶 Bello · 🐔 Kiki · 🐰 Luna · 🦊 Fips** – gleich stark, aber mit unterschiedlichen Angriffsstilen.
 
 **🎚️ Leicht · Mittel · Schwer · Ultra** – mit begrenzten Leben und echtem Game Over.
 
 **🌀 Schwingende Saugschläuche** führen in schwebende Wolken, Maulwurfstollen und Tropfsteinhöhlen. **🐦 Mit etwas Geschick Vogelreiten (6 s)** oder **🐌 auf einer Wand- und Deckenschnecke mitfahren (8 s)**. Abspringen mit derselben Sprungtaste!
 
-**🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen mit etwas Glück Leben, lustige Hüte, Kostüme oder kleine Kräfte gewinnen.
+**🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen Leben, tiergerechte animierte Outfits oder kleine Kräfte gewinnen.
+
+**🎨 Vier eigene Grafikstile** · **🎵 Dynamische Originalmusik** für Kampf, Boss, Höhlen, Wolken, Vogel- und Schneckenritt, Magie, Flüche und Story.
 
 ## ✨ Tierkräfte – unbedingt einsammeln!
 
@@ -27,7 +31,7 @@ Wähle **🐱 Momo, 🐶 Bello, 🐔 Kiki, 🐰 Luna oder 🦊 Fips** – gleich
 | **7 Sek.** | **8 Sek.** | **7 Sek.** |
 | Die Welt wackelt vor Momos Augen! | Momo schleicht im Schneckentempo! | Kein Katzenzauber möglich! |
 
-⏳ **Countdown direkt über Momos Kopf.** Die Flüche verschwinden automatisch.
+⏳ **Countdown über der Spielfigur.** Die Flüche verschwinden automatisch.
 
 ## 🍄 Magische Verwandlungen
 
