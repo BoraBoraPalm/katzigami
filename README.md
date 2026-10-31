@@ -1,6 +1,6 @@
 # 🐱 KATZIGAMI – Das Pilzorakel 🌸
 
-Ein eigenständiges, kostenloses Katzen-Jump-'n'-Run für Handys und Desktop. Vier musikalisch und visuell unterschiedliche Blumenwelten, sieben Orakelpilze und vier zusätzliche Verwandlungspilze, neue Katzen-Lauf- und Sprunganimationen, lustige synthetisierte Sounds, ein Spiegelkatzen-Boss und Dialogentscheidungen, die die Handlung, Abkürzungen, Gegner und mehrere Enden verändern.
+Ein eigenständiges, kostenloses Katzen-Jump-'n'-Run für Handys und Desktop. Vier musikalisch und visuell unterschiedliche Blumenwelten mit zwölf deutlich längeren Levels, sieben Orakelpilze und vier Verwandlungsstufen, neue Katzen-Lauf- und Sprunganimationen, lustige synthetisierte Sounds, ein Spiegelkatzen-Boss und Dialogentscheidungen, die die Handlung, Abkürzungen, Gegner und mehrere Enden verändern.
 
 **Spielen:** https://boraborapalm.github.io/katzigami/
 
@@ -49,3 +49,12 @@ Das Projekt ist öffentlich zugänglich. Der Quellcode enthält ausschließlich 
 - Gegner haben lokale taktische KI (Regelsteuerung): Beobachten, Verfolgen, Ausweichen und zielende Angriffe. Keine Netzwerkverbindung und keine Sprachmodell-API nötig.
 - **Technische Klarstellung:** Die freien Antworten werden bisher mit einem lokalen Schlüsselwort-/Regelsystem interpretiert; sie sind **keine generativen Antworten eines KI-Sprachmodells**. Unbegrenzte frei erfundene Reaktionen würden einen sicheren Backend-Proxy und einen separaten KI-Dienst erfordern, dessen Zugangsdaten niemals in ein öffentliches GitHub-Pages-Repository gehören.
 - Die Welt wird absichtlich **nicht vollständig zufällig** erzeugt: die vier Kapitel und die wichtigen Pilze bleiben spielbar und erreichbar, wichtige Storyereignisse erhalten Varianten und zusätzliche Konsequenzen.
+## Retro-Anime-Kampagne: 12 Level
+
+- Vier Themenwelten mit je drei längeren, unterschiedlich gestalteten Abschnitten; insgesamt zwölf Level.
+- Neue Ninjakatzen, Geisterpfoten, Bogenmiezies und schwer gepanzerte Wächter; mehrere Treffer nötig.
+- Zusätzliche Gegenstände: **Turbo-Fisch (9 s)** erhöht die Laufgeschwindigkeit, **Sternen-Schutz (6 s)** verleiht Unverwundbarkeit, **Flugfeder (8 s)** ermöglicht Fliegen durch Gedrückthalten der Sprungtaste.
+- **Schwindelpilz (7 s)** lässt nur das Spielfeld schwanken, **Schneckenschleim (8 s)** reduziert das Tempo und **Magie-Siegel (7 s)** blockiert temporär die Spezialtaste.
+- Alle aktiven Effekte zeigen ihre Restdauer direkt über Momos Kopf; bei einer Pause laufen die Timer nicht weiter.
+- Gute Gegenstände sind hell gestaltet, gefährliche Gegenstände dunkel mit Warnmarkierung. Die Tasten für Laufen, Springen und Magie wurden nicht verkleinert oder verschoben.
+- Die sieben Orakelpilze bleiben weiterhin die Sammlung für die Handlung; temporäre Buffs und Flüche sind separat.
