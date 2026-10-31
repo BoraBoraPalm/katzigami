@@ -59,9 +59,10 @@ with sync_playwright() as P:
  page.evaluate('window.__katzigamiTest.enterLevel(0)')
  page.evaluate('window.__katzigamiTest.takePower()')
  page.evaluate('window.__katzigamiTest.step(.2)')
- # Aim relative to the actual moving enemy; enemy locations vary with each seed.
- target=snap(page)['enemies'][0]['x']
- page.evaluate('(x)=>window.__katzigamiTest.position(x-95,390)',target)
+ # Pin the target and exclude other patrollers so the actual projectile collision is reproducible.
+ first=snap(page)['enemies'][0]
+ assert page.evaluate('(id)=>window.__katzigamiTest.isolateEnemy(id,540)',first['id'])
+ page.evaluate('window.__katzigamiTest.position(415,390)')
  page.evaluate('window.__katzigamiTest.step(.04)')
  assert page.evaluate('window.__katzigamiTest.cast()'), 'Cannot cast for enemy collision check'
  page.evaluate('window.__katzigamiTest.step(.45)')
