@@ -128,7 +128,21 @@ const DIFFICULTY={
  hard:{name:'Schwer',hearts:3,lives:3,enemyHp:1.3,enemySpeed:1.2,reward:.85},
  ultra:{name:'Ultra',hearts:2,lives:1,enemyHp:1.55,enemySpeed:1.45,reward:.7}
 };
-const COSTUMES={clown:'🤡 Clownhut mit Blume',mouse:'🎩 Maus-Zylinder',armor:'🛡️ Ritterrüstung',chef:'👨‍🍳 Kochmütze',crown:'👑 Prinzenkrone',bow:'🎀 Riesenschleife'};
+const COSTUMES={clown:'Clownhut mit Zauberblume',mouse:'Zylinder mit neugieriger Maus',armor:'Prunkrüstung',chef:'Festtags-Kochhaube',crown:'Sternenkrone',bow:'Flatternde Festschleife'};
+const COSTUME_STYLE={
+ cat:{clown:'Schnurrbart-Clownhut',mouse:'Mäusezylinder mit Münztrick',armor:'Mondpfoten-Panzer',chef:'Thunfisch-Kochmütze',crown:'Samtpfoten-Diadem',bow:'Kirschblüten-Schleife'},
+ dog:{clown:'Wackelohr-Blumenhut',mouse:'Knochenzauber-Zylinder',armor:'Knochenritter-Harnisch',chef:'Keksbäcker-Haube',crown:'Spürnasen-Krone',bow:'Schwanzwedel-Halstuch'},
+ chicken:{clown:'Kicher-Kammhut',mouse:'Kükenzauber-Zylinder',armor:'Eierwächter-Rüstung',chef:'Eierkoch-Haube',crown:'Sonnenkamm-Krone',bow:'Festliches Federcape'},
+ rabbit:{clown:'Wackelohren-Blume',mouse:'Traumhasen-Zylinder',armor:'Mondhasen-Panzer',chef:'Karottenkoch-Haube',crown:'Traumohren-Krone',bow:'Sternenohren-Schleife'},
+ fox:{clown:'Fuchsschalk-Blumenhut',mouse:'Fuchstrick-Zylinder',armor:'Waldwächter-Rüstung',chef:'Waldküchen-Haube',crown:'Herbstlaub-Krone',bow:'Flatternder Blätterkragen'}
+};
+const OUTFIT_PALETTES={
+ cat:['#efb2d1','#926eae','#ffe2a1'],dog:['#93c7e6','#537ea9','#fff1c9'],
+ chicken:['#f6bd71','#ce755e','#fff0b1'],rabbit:['#c8aae9','#8b73bd','#f9e4ff'],
+ fox:['#dfab79','#9b665f','#fff0be']
+};
+const prizeName=(id)=>COSTUME_STYLE[save.character]?.[id]||COSTUMES[id]||id;
+
 const SMALL_PERKS={glide:'Leichtes Gleiten',bounce:'Etwas höher springen',magnet:'Münzenmagnet',rapid:'Zauber etwas schneller' };
 const diff=()=>DIFFICULTY[save.difficulty]||DIFFICULTY.medium;
 const hero=()=>HEROES[save.character]||HEROES.cat;
@@ -596,10 +610,11 @@ function awardDice(house){
  if(roll===1){save.hearts=Math.min(diff().hearts,save.hearts+2);reward='💗 Zwei Herzen für '+name+'!';}
  else if(roll===2){save.lives+=1;reward='🐾 Ein zusätzliches Leben!';}
  else if(roll===3){save.coins+=30;reward='🪙 30 Münzen – Jackpot!';}
- else if(roll===4||roll===5){const keys=Object.keys(COSTUMES),outfit=keys[Math.floor(Math.random()*keys.length)];if(!save.costumes.includes(outfit))save.costumes.push(outfit);save.outfit=outfit;reward='🎩 Neues Kostüm: '+COSTUMES[outfit]+'!';}
+ else if(roll===4||roll===5){const keys=Object.keys(COSTUMES),outfit=keys[Math.floor(Math.random()*keys.length)];if(!save.costumes.includes(outfit))save.costumes.push(outfit);save.outfit=outfit;reward='🎩 Neues Kostüm: '+prizeName(outfit)+'!';}
  else {const keys=Object.keys(SMALL_PERKS),perk=keys[Math.floor(Math.random()*keys.length)];save.perk=perk;reward='✨ Kleine Fähigkeit: '+SMALL_PERKS[perk]+'!';}
  save.rolledHouses.push(house.id);house.used=true;persist();updateUI();sound('transform');
  dialog({tag:'WÜRFELHAUS · '+roll+' AUGEN',title:'Glücks-Miau!',portrait:'🎲 '+portrait+' '+hero().icon,body:reward+' Das Glückshaus kann in diesem Durchlauf nur einmal verwendet werden.',options:[{label:'🐾 Weiter durch die Welt!',action:resume}]});
+ showRewardIllustration(roll,reward);
 }
 function visitHouse(house){
  if(house.used||phase!=='playing')return;
@@ -1078,16 +1093,80 @@ function drawVerticalWorld(){
   ctx.beginPath();ctx.moveTo(x-23,690);ctx.lineTo(x,spike.y+76);ctx.lineTo(x+23,690);ctx.closePath();ctx.fillStyle='#dfc0f7';ctx.fill();
  }
 }
+// Hand-drawn vector outfits: every animal gets individual colors and prize names.
+function materialGradient(upper,lower,y=-54,h=58){
+ const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,upper);g.addColorStop(.48,'#fff9ef');g.addColorStop(.53,upper);g.addColorStop(1,lower);return g;
+}
+function drawRosette(x,y,color,scale=1){
+ ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(clock*2.8+x)*.14);ctx.scale(scale,scale);
+ for(let k=0;k<7;k++){const a=k*Math.PI*2/7;ellipse(Math.cos(a)*9,Math.sin(a)*9,8,13,color,a)}
+ ellipse(0,0,9,9,'#fff4b5');ellipse(-2,-3,3,3,'#fff');ctx.restore();
+}
+function drawRibbon(x,y,color){
+ ctx.save();ctx.translate(x,y);
+ for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(side*24,-25,side*42,-10+Math.sin(clock*6)*5,side*30,10);ctx.lineTo(0,2);ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#fff7ee';ctx.lineWidth=2;ctx.stroke()}
+ ellipse(0,0,11,10,'#fff7e8');ellipse(0,0,5,6,color);ctx.restore();
+}
 function drawOutfit(x,y){
  if(!save.outfit||!player)return;
- const theta=player.dizzy>0?Math.sin(clock*21)*.28:0;
- ctx.save();ctx.translate(x,y-66);ctx.rotate(theta);ctx.textAlign='center';
- if(save.outfit==='mouse'){
-  round(-23,-47,46,33,5,'#313044','#ffe4b5',3);round(-35,-18,70,10,5,'#313044','#ffe4b5',2);
-  if(Math.sin(clock*2.5)>.3){ctx.font='28px sans-serif';ctx.fillText('🐭',0,-43)}
- }else if(save.outfit==='clown'){ctx.font='37px sans-serif';ctx.fillText('🤡',0,-10);ctx.fillText('🌼',25,-35)}
- else{ctx.font='35px sans-serif';ctx.fillText({armor:'🛡️',chef:'👨‍🍳',crown:'👑',bow:'🎀'}[save.outfit]||'🎩',0,-20)}
+ const id=save.outfit,colors=OUTFIT_PALETTES[save.character]||OUTFIT_PALETTES.cat;
+ const [base,dark,bright]=colors;
+ const anim=player.dizzy>0?Math.sin(clock*21)*.20:Math.sin(clock*2.6)*.025;
+ ctx.save();ctx.translate(x,y-66);ctx.rotate(anim);ctx.lineJoin='round';ctx.lineCap='round';
+ const material=materialGradient(base,dark,-70,75);
+ if(id==='armor'){
+  round(-28,38,56,36,13,material,dark,3);
+  round(-28,38,56,13,6,'#fff9de',dark,2);
+  for(const side of [-1,1]){ellipse(side*30,47,13,13,material);ellipse(side*30,47,6,6,bright)}
+  ctx.strokeStyle='#fff4dc';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,46);ctx.lineTo(0,70);ctx.stroke();drawRosette(0,52,base,.42);
+ }else if(id==='mouse'){
+  round(-25,-51,50,37,6,material,'#eed2a9',3);
+  round(-38,-17,76,12,7,dark,bright,3);
+  round(-24,-28,48,6,3,bright);
+  const pop=Math.max(0,Math.sin(clock*2.7))*24;
+  ctx.save();ctx.translate(0,-43-pop);
+  ellipse(-11,-7,9,11,'#c3a8c2');ellipse(11,-7,9,11,'#c3a8c2');
+  ellipse(-11,-7,5,6,'#efc7d4');ellipse(11,-7,5,6,'#efc7d4');
+  ellipse(0,3,17,14,'#e2c9d8');ellipse(-6,1,2,3,'#503e5b');ellipse(6,1,2,3,'#503e5b');
+  ellipse(0,7,3,2,'#d786a7');ctx.strokeStyle='#fff';ctx.lineWidth=1.2;
+  for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(2*side,8);ctx.lineTo(17*side,12);ctx.stroke()}
+  ctx.restore();
+  if(pop>15){ellipse(27,-52-pop*.3,9,10,'#f8d46e');ellipse(27,-52-pop*.3,6,7,'#fff1b0');ctx.fillStyle='#b77b35';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText('1',27,-49-pop*.3)}
+ }else if(id==='clown'){
+  ctx.beginPath();ctx.moveTo(-27,-12);ctx.quadraticCurveTo(-15,-52,3,-69);ctx.quadraticCurveTo(23,-50,29,-12);ctx.closePath();ctx.fillStyle=material;ctx.fill();
+  ctx.strokeStyle=dark;ctx.lineWidth=3;ctx.stroke();
+  for(let i=0;i<4;i++)ellipse(-14+i*9,-28-i*7,4,3,i%2?bright:'#fff');
+  round(-32,-16,65,12,6,'#fff9e5',dark,2);drawRosette(28,-27,'#fca7bb',.95);
+ }else if(id==='chef'){
+  round(-22,-24,44,19,5,'#fffaf0',dark,2);
+  for(const [cx,cy,r] of [[-20,-37,20],[0,-50,22],[22,-35,19]])ellipse(cx,cy,r,r*.8,'#fff8ef');
+  round(-25,-31,50,11,4,base,bright,2);
+  drawRosette(0,-34,base,.42);
+ }else if(id==='crown'){
+  ctx.beginPath();ctx.moveTo(-27,-12);ctx.lineTo(-30,-50);ctx.lineTo(-15,-31);ctx.lineTo(0,-57);ctx.lineTo(15,-31);ctx.lineTo(30,-50);ctx.lineTo(27,-12);ctx.closePath();
+  ctx.fillStyle=materialGradient(bright,dark,-62,56);ctx.fill();ctx.strokeStyle=dark;ctx.lineWidth=3;ctx.stroke();
+  round(-29,-21,58,13,5,base,bright,2);
+  for(let i=-2;i<=2;i++)ellipse(i*11,-19-(i%2===0?3:0),4,5,i===0?'#f3a1d5':'#c3eaf4');
+ }else if(id==='bow'){
+  drawRibbon(0,-13,base);
+  ctx.save();ctx.rotate(Math.sin(clock*6)*.1);
+  for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(side*18,37+Math.sin(clock*4+side)*4);ctx.lineTo(side*5,29);ctx.closePath();ctx.fillStyle=side===1?base:bright;ctx.fill()}
+  ctx.restore();
+  ellipse(0,-11,7,7,dark);
+ }
+ if(['clown','mouse','chef','crown'].includes(id)){
+  ellipse(-20,-14,4,2,'#ffffffbb');ellipse(17,-16,3,2,'#ffffff99');
+ }
  ctx.restore();
+}
+function showRewardIllustration(roll,reward){
+ const card=overlayContent.querySelector('.story-card');if(!card)return;
+ card.classList.add('loot-card');
+ const art=document.createElement('div');art.className='loot-art';
+ const icons={1:'♥',2:'✦',3:'◈',4:'♛',5:'✿',6:'◇'};
+ const symbol=icons[roll]||'✦',label=roll===4||roll===5?prizeName(save.outfit):reward.split('!')[0];
+ art.innerHTML='<div class="loot-halo"><span class="loot-symbol">'+symbol+'</span><span class="loot-spark one">✦</span><span class="loot-spark two">✧</span><span class="loot-spark three">✦</span></div><strong>'+escapeText(label)+'</strong><small>NEU FREIGESCHALTET · '+escapeText(hero().name.toUpperCase())+'</small>';
+ const title=card.querySelector('.story-title');title?.after(art);
 }
 function drawHero(x,y,bob){
  if(save.character==='cat'){drawCat(x,y,1,'cream',bob,player.facing,player)}
