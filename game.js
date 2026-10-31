@@ -549,7 +549,7 @@ function drawAdventure(){
 function startDialog(i){
  if(i===0){
   const name=hero().name;
-  dialog({tag:'PROLOG · DIE SIEBEN ZEITGLOCKEN',title:'Das gestohlene Morgen',portrait:hero().icon+' 🌸 🕰️',
+  dialog({tag:'PROLOG · DIE SIEBEN ZEITGLOCKEN',title:hero().name+' und das gestohlene Morgen',portrait:hero().icon+' 🌸 🕰️',
    body:openingForHero()+' Die Blumen werden grau und Katzenwächter sperren die Wege. Pilzbote Pip beschuldigt Königin Dahlia – doch auf seinem Befehl steht heimlich das Zeichen des Uhrmeisters NOX. Finde sieben Orakelpilze, rette die Herzuhr und entscheide, wem du glaubst.',
    options:[
     {label:'💗 Erst die Bewohner retten!',action:()=>{save.flags.cake=true;persist();resume();toast(name+': »Ich lasse niemanden zurück!«')}},
@@ -584,8 +584,8 @@ function bossTalk(){if(phase!=='playing'||boss.triggered)return;boss.triggered=t
  if(empathic){options.push({label:'💞 »Ich weiß, wer du bist. Komm mit, Zukunfts-Momo.«',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Du hast mich … nicht gehasst?«')}})}
  else if(canOffer){options.push({label:'🍄 Einen Pilz teilen – Frieden?',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Ist das … Käsegeschmack?!«')}})}
  options.push({label:'⚔️ »Dann tanzen wir, Schattenpfote!« (12 Herzen)',action:()=>{boss.active=true;save.flags.kindShadow=false;persist();resume();toast('Spring dem Spiegelkätzchen zweimal auf den Kopf!')}});
- dialog({tag:'FINALE · DER SPIEGEL',title:'Du bist … ICH?!',portrait:'🐱 🪞 🐈‍⬛',body:'Nox tritt aus der Uhr: »Ein Morgen, das ich nicht beherrsche, darf nicht existieren.« Spiegel-Momo zittert: »Ich wollte nur verhindern, dass wir noch jemanden verlieren.« Die Schattenkatze ist gefangen zwischen Schuld und Angst. Du kannst Frieden versuchen oder kämpfen.',options})}
-function endChoice(){if(phase!=='playing')return;dialog({tag:'FINALE · DEINE ENTSCHEIDUNG',title:'Die Uhr tickt wieder',portrait:'🌈 🐱 ⏳',body:`Du hast ${save.collected.length} von ${TOTAL} Orakelpilzen. Momo hält die Sanduhr in den Pfoten. Die Welt kann wieder wachsen – oder für immer in einem hübschen Augenblick bleiben.`,options:[
+ dialog({tag:'FINALE · DER SPIEGEL',title:'Spiegel-Momo · die gefangene Katze',portrait:'🐱 🪞 🐈‍⬛',body:'Nox tritt aus der Uhr: »Ein Morgen, das ich nicht beherrsche, darf nicht existieren.« Spiegel-Momo zittert: »Ich wollte nur verhindern, dass wir noch jemanden verlieren.« Die Schattenkatze ist gefangen zwischen Schuld und Angst. Du kannst Frieden versuchen oder kämpfen.',options})}
+function endChoice(){if(phase!=='playing')return;dialog({tag:'FINALE · DEINE ENTSCHEIDUNG',title:'Die Uhr tickt wieder',portrait:'🌈 🐱 ⏳',body:`Du hast ${save.collected.length} von ${TOTAL} Orakelpilzen. ${hero().name} hält die Sanduhr in den Pfoten. Die Welt kann wieder wachsen – oder für immer in einem hübschen Augenblick bleiben.`,options:[
  {label:'🌸 Zeit freigeben – Veränderung wagen',action:()=>ending('release')},
  {label:'🌙 Alles für immer bewahren – den Moment einfrieren',action:()=>ending('freeze')}
  ]})}
