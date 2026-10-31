@@ -1381,11 +1381,16 @@ function tickRealmBefore(dt){
    o.timer=0;effects.speed=Math.max(effects.speed||0,2);toast('🏎️ PFOTENTURBO!');sound('transform')}
   if(o.kind==='hurdle'&&closeToRealm(o,player.x+20,player.y+45,29,52)&&player.y>325)hurt();
   if(o.kind==='oil'&&closeToRealm(o,player.x+20,player.y+55,55,36)){player.vx+=player.facing*340*dt}
+  if((o.kind==='meteor'||o.kind==='ufo')&&o.hit&&o.timer>(o.kind==='meteor'?3:9)){o.hit=false;o.timer=0;o.y=75;o.vy=0}
   if((o.kind==='meteor'||o.kind==='ufo')&&near&&!o.hit){
    if(o.kind==='meteor'){
     o.y+= (o.vy||0)*dt;o.vy=(o.vy||0)+250*dt;
     if(o.y>470){o.y=50-(o.timer%2)*160;o.vy=0;biomeSplash('moon',o.x,430,15)}
-   }else o.y=180+Math.sin(clock*2+o.phase)*105;
+   }else{
+    o.y=180+Math.sin(clock*2+o.phase)*105;
+    o.attack=(o.attack??2)-dt;
+    if(o.attack<=0){o.attack=3.2;const dx=player.x-o.x,dy=player.y-o.y,d=Math.max(1,Math.hypot(dx,dy));enemyShots.push({x:o.x,y:o.y+18,vx:dx/d*210,vy:dy/d*210,life:4});sound('cast')}
+   }
    if(closeToRealm(o,player.x+20,player.y+35,37,39))hurt();
   }
   if(o.kind==='current'&&Math.abs(player.x-o.x)<85&&inSeaWater())player.vx+=Math.sin(clock*2+o.phase)*160*dt;
@@ -1899,6 +1904,16 @@ function realmTerrain(p){
  if(p.helper){ctx.fillStyle='#ffedaa';for(let k=0;k<w/40;k++)ctx.fillText('✦',k*40,6)}
  ctx.restore();
 }
+function drawDiveHelmet(x,y){
+ ctx.save();ctx.translate(x,y-19);
+ ctx.globalAlpha=.28;ellipse(0,-3,37,42,'#b6f9fb');ctx.globalAlpha=1;
+ ctx.strokeStyle='#d3b77a';ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,-5,38,0,Math.PI*2);ctx.stroke();
+ ctx.strokeStyle='#fcf0c3';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-5,30,Math.PI*1.08,Math.PI*1.83);ctx.stroke();
+ for(let i=0;i<6;i++){const a=i*Math.PI/3;ellipse(Math.sin(a)*37,-5+Math.cos(a)*37,3,3,'#fff4d5')}
+ ctx.globalAlpha=.75;ellipse(17,-23,7,13,'#fff9f2');
+ ctx.globalAlpha=1;round(-23,30,46,11,6,'#e7c898','#fff0c5',3);
+ ctx.restore();
+}
 function realmHUD(){
  if(!level?.realm||phase==='menu')return;
  const R=level.realm;
@@ -2305,6 +2320,7 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
   const mx=player.x+player.w/2-cam,my=player.y+player.h*.54;
   ctx.save();if(player.riding){const m=level.mounts.find(x=>x.id===player.riding.id);if(m?.kind==='snail'){ctx.translate(mx,my);ctx.rotate(m.angle||0);ctx.translate(-mx,-my)}}
   drawHero(mx,level.realm.id==='race'?my-13:my,bob);
+  if(level.realm.id==='sea'&&inSeaWater())drawDiveHelmet(mx,my);
   if(level.realm.id==='race'){ctx.save();ctx.translate(mx,my+31);round(-35,-8,70,28,11,'#af83c8','#fff1d5',4);ellipse(-25,23,14,14,'#453a5c');ellipse(25,23,14,14,'#453a5c');round(-15,-19,30,10,5,'#ffe5ad');ctx.restore()}
   ctx.restore()
  }
