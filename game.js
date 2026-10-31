@@ -94,6 +94,48 @@ const CHAPTERS=BASE_CHAPTERS.flatMap((base,act)=>[0,1,2,3,4].map(stage=>{
  const mushrooms=stage===0?base.mushrooms.slice(0,1):stage===2?base.mushrooms.slice(1,2):[];
  return {...base,act,stage,name:names[act][stage],subtitle:'WELT '+(act+1)+' · LEVEL '+(stage+1)+' / 5',width,gaps,platforms,mushrooms,checkpoint:[...base.checkpoint,Math.floor((base.width+width)/2)].sort((a,b)=>a-b),enemies:[...base.enemies,base.width+135,base.width+500,base.width+850],power:[base.power[0],stage===0?base.power[1]:base.width+170,400]};
 }));
+// Seven fully distinct mechanical realms. Three stages per realm (two on the mountain).
+// The four-act narrative and seven Orakelpilze remain independent of these biomes.
+const REALMS=[
+ {id:'castle',name:'Geisterschloss',icon:'🏰',colors:['#171d43','#4b3769'],hills:['#554b7c','#2d284e'],grass:'#9f839f',soil:'#51445b',levels:['Die spießige Porträtgalerie','Der Kerker der Flüsternden','Das Mitternachtsbankett']},
+ {id:'snow',name:'Schneesturm',icon:'❄️',colors:['#819dbb','#effbff'],hills:['#d8eaf4','#9dc8d9'],grass:'#e8faff',soil:'#9bb5c4',levels:['Die brechenden Eisschollen','Igludorf im Weißsturm','Die Höhle unter dem Eis']},
+ {id:'jungle',name:'Dschungel',icon:'🌿',colors:['#236d63','#a5dba5'],hills:['#2e9670','#195744'],grass:'#5eaa75',soil:'#64513e',levels:['Das Affen-Lianenlabyrinth','Bananenregen im Blätterdach','Piranhas unter den Wurzeln']},
+ {id:'race',name:'Rennstrecke',icon:'🏁',colors:['#ecc28c','#ffecc6'],hills:['#d4a8bd','#b381a3'],grass:'#e8bb8b',soil:'#806275',levels:['Die Pfoten-Grand-Prix','Rennbahn der Tausend Kurven','Das Finale gegen Turbo-Tavi']},
+ {id:'moon',name:'Mond',icon:'🌙',colors:['#12122e','#565484'],hills:['#6d668a','#41395d'],grass:'#aaa2c7',soil:'#5e577a',levels:['Schwerelos über Katzigami','Meteoriten-Gewitter','Die fliegenden Untertassen']},
+ {id:'sea',name:'Unterwasserwelt',icon:'🌊',colors:['#0b476b','#187d92'],hills:['#296c82','#154b73'],grass:'#8ac6b1',soil:'#33667b',levels:['Der langsame Luftschlauch','Tiefsee und Unterwasserhöhle','Die versunkene Stadt Atlantis']},
+ {id:'mountain',name:'Bergwelt',icon:'🏔️',colors:['#8fa6c0','#e4e5da'],hills:['#b6c2c9','#657989'],grass:'#a5beaa',soil:'#677586',levels:['Die Adlerklamm','Lawine vor der letzten Herzuhr']}
+];
+const realmOf=i=>REALMS[Math.min(6,Math.floor(Math.max(0,i)/3))];
+for(let i=0;i<CHAPTERS.length;i++){
+ const world=realmOf(i),stage=i-Math.min(6,Math.floor(i/3))*3,chapter=CHAPTERS[i],width=chapter.width;
+ chapter.biome=world.id;chapter.name=world.levels[Math.min(world.levels.length-1,stage)];
+ chapter.subtitle='WELT '+(Math.min(6,Math.floor(i/3))+1)+' · '+world.name.toUpperCase()+' · '+(stage+1)+'/'+world.levels.length;
+ chapter.sky=world.colors;chapter.hills=world.hills;chapter.grass=world.grass;chapter.soil=world.soil;
+ if(world.id==='sea'){
+  chapter.gaps=[[460,width-250]];
+  chapter.platforms=[[230,356,175],[660,690,145],[945,835,140],[1290,936,200],[1720,755,280],[2200,840,250],[width-590,735,270]];
+ }else if(world.id==='moon'){
+  chapter.gaps=[[880,1090],[1670,1890],[Math.max(2300,width-1090),Math.max(2530,width-800)]];
+  chapter.platforms=[[370,335,165],[800,280,130],[1010,145,180],[1290,320,145],[1730,140,150],[2100,260,190],[width-800,170,170],[width-530,350,190]];
+ }else if(world.id==='jungle'){
+  chapter.gaps=[[1030,1300],[2210,2450],[Math.max(2860,width-930),Math.max(3100,width-710)]].filter(([a,b])=>b<width-350);
+  chapter.platforms=[[410,350,170],[760,255,135],[1000,340,190],[1380,210,200],[1710,310,180],[2130,210,210],[2530,280,180],[width-680,230,170]];
+ }else if(world.id==='snow'){
+  chapter.gaps=[[1160,1320],[1850,2100],[Math.max(2600,width-1020),Math.max(2780,width-830)]].filter(([a,b])=>b<width-300);
+  chapter.platforms=[[375,344,165],[980,355,185],[1410,337,160],[1790,348,165],[2250,302,195],[width-650,345,210]];
+ }else if(world.id==='castle'){
+  chapter.gaps=[[1250,1410],[2510,2645]].filter(([a,b])=>b<width-300);
+  chapter.platforms=[[360,355,180],[795,275,145],[1160,380,190],[1450,315,160],[1950,250,190],[2380,344,135],[width-820,270,210]];
+ }else if(world.id==='race'){
+  chapter.gaps=[[1450,1530],[2580,2660]].filter(([a,b])=>b<width-300);
+  chapter.platforms=[[730,385,100],[1550,378,120],[2210,340,135],[3200,390,160]].filter(([x])=>x<width-190);
+ }else{
+  chapter.gaps=[[1080,1280],[2250,2530],[Math.max(2780,width-1020),Math.max(3010,width-790)]].filter(([a,b])=>b<width-300);
+  chapter.platforms=[[420,347,180],[730,291,130],[1170,360,160],[1510,284,150],[1880,210,145],[2420,320,140],[width-840,194,170],[width-610,286,180]];
+ }
+ chapter.checkpoint=[920,Math.round(width*.55),width-780];
+}
+
 const actOf=i=>Math.floor(Math.max(0,i)/5);
 const isFinal=i=>i===CHAPTERS.length-1;
 // A new local campaign seed changes the mystery, atmosphere, encounters and cat personalities.
