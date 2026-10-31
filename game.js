@@ -71,16 +71,21 @@ const BASE_CHAPTERS=[
   mushrooms:[['crown',1910,302]],enemies:[660,1420,2070],npcs:[[310,'Miso','Wenn wir das überleben, gründe ich eine Pilz-Pizzeria. Ohne Pilze.','ginger']],checkpoint:[1020,1880],power:['starlight',1230,402]}
 ];
 // Twelve longer stages spanning four different story worlds.
-const CHAPTERS=BASE_CHAPTERS.flatMap((base,act)=>[0,1,2].map(stage=>{
- const names=[['Die Kicherwiese','Der Mohnblumen-Boulevard','Das Kirschblüten-Karussell'],['Der Flüsterwald','Der Mooskatzen-Tempel','Die Nebelpfoten-Schlucht'],['Der Zuckermond','Die Kristall-Milchstraße','Der Süßigkeiten-Meteor'],['Der Sternengarten','Die Uhrwerk-Pagode','Das Spiegelkönigreich']];
- const width=base.width+720+stage*740+act*210;
+const CHAPTERS=BASE_CHAPTERS.flatMap((base,act)=>[0,1,2,3,4].map(stage=>{
+ const names=[
+ ['Die Kicherwiese','Mohnblumen-Boulevard','Kirschblüten-Karussell','Wolken über Milchtal','Das Maulwurf-Picknick'],
+ ['Der Flüsterwald','Mooskatzen-Tempel','Nebelpfoten-Schlucht','Fledermaus-Glockenturm','Der Regenwurm-König'],
+ ['Der Zuckermond','Kristall-Milchstraße','Süßigkeiten-Meteor','Wolkenzirkus','Die Tropfstein-Bäckerei'],
+ ['Der Sternengarten','Uhrwerk-Pagode','Das Sternschnuppenfeld','Die letzte Wolkentreppe','Das Spiegelkönigreich']
+];
+ const width=base.width+720+stage*620+act*190;
  const gaps=base.gaps.map(g=>[...g]),platforms=base.platforms.map(p=>[...p]);
  for(let x=base.width+220;x<width-340;x+=680){const span=100+stage*10;gaps.push([x,x+span]);platforms.push([x-65,354+(x%3)*14,span+200]);platforms.push([x+245,322+stage%2*28,155])}
  gaps.sort((a,b)=>a[0]-b[0]);
- const mushrooms=stage===0?base.mushrooms.slice(0,1):stage===1?base.mushrooms.slice(1,2):[];
- return {...base,act,stage,name:names[act][stage],subtitle:'WELT '+(act+1)+' · LEVEL '+(stage+1)+' / 3',width,gaps,platforms,mushrooms,checkpoint:[...base.checkpoint,Math.floor((base.width+width)/2)].sort((a,b)=>a-b),enemies:[...base.enemies,base.width+135,base.width+500,base.width+850],power:[base.power[0],stage===0?base.power[1]:base.width+170,400]};
+ const mushrooms=stage===0?base.mushrooms.slice(0,1):stage===2?base.mushrooms.slice(1,2):[];
+ return {...base,act,stage,name:names[act][stage],subtitle:'WELT '+(act+1)+' · LEVEL '+(stage+1)+' / 5',width,gaps,platforms,mushrooms,checkpoint:[...base.checkpoint,Math.floor((base.width+width)/2)].sort((a,b)=>a-b),enemies:[...base.enemies,base.width+135,base.width+500,base.width+850],power:[base.power[0],stage===0?base.power[1]:base.width+170,400]};
 }));
-const actOf=i=>Math.floor(Math.max(0,i)/3);
+const actOf=i=>Math.floor(Math.max(0,i)/5);
 const isFinal=i=>i===CHAPTERS.length-1;
 // A new local campaign seed changes the mystery, atmosphere, encounters and cat personalities.
 const MYSTERIES=[
@@ -91,18 +96,40 @@ const MYSTERIES=[
  {name:'Der endlose Samstag',cause:'Ein ängstliches Zukunftskätzchen wollte einen glücklichen Tag niemals enden lassen.',clue:'Die Uhren haben aufgehört zu ticken, aber die Fische werden älter.',ending:'Die Zeit läuft wieder und Zukunfts-Momo wagt einen neuen Tag.'}
 ];
 const CAT_PERSONALITIES=['frech','vorsichtig','dramatisch','verspielt','misstrauisch'];
+const HEROES={
+ cat:{name:'Momo',label:'🐱 Momo · Samtpfote',blurb:'Ausgewogen, schnurrende Zaubergeschosse.',icon:'🐱'},
+ dog:{name:'Bello',label:'🐶 Bello · Wackelohr',blurb:'Federnde Bälle, gleicher Schaden wie Momo.',icon:'🐶'},
+ chicken:{name:'Kiki',label:'🐔 Kiki · Eierkönigin',blurb:'Bunte Eier im Bogen – gleich starke Angriffe.',icon:'🐔'},
+ rabbit:{name:'Luna',label:'🐰 Luna · Langohr',blurb:'Hoppelige Sternensprünge, gleich starke Magie.',icon:'🐰'},
+ fox:{name:'Fips',label:'🦊 Fips · Fuchsnase',blurb:'Wirbelnde Blätter, genauso stark wie die anderen.',icon:'🦊'}
+};
+const DIFFICULTY={
+ easy:{name:'Leicht',hearts:5,lives:9,enemyHp:1,enemySpeed:.8,reward:1.4},
+ medium:{name:'Mittel',hearts:3,lives:5,enemyHp:1,enemySpeed:1,reward:1},
+ hard:{name:'Schwer',hearts:3,lives:3,enemyHp:1.3,enemySpeed:1.2,reward:.85},
+ ultra:{name:'Ultra',hearts:2,lives:1,enemyHp:1.55,enemySpeed:1.45,reward:.7}
+};
+const COSTUMES={clown:'🤡 Clownhut mit Blume',mouse:'🎩 Maus-Zylinder',armor:'🛡️ Ritterrüstung',chef:'👨‍🍳 Kochmütze',crown:'👑 Prinzenkrone',bow:'🎀 Riesenschleife'};
+const SMALL_PERKS={glide:'Leichtes Gleiten',bounce:'Etwas höher springen',magnet:'Münzenmagnet',rapid:'Zauber etwas schneller' };
+const diff=()=>DIFFICULTY[save.difficulty]||DIFFICULTY.medium;
+const hero=()=>HEROES[save.character]||HEROES.cat;
 function seeded(seed,salt){let n=(seed^Math.imul(salt+17,0x9e3779b1))>>>0;n^=n>>>16;n=Math.imul(n,0x7feb352d);n^=n>>>15;n=Math.imul(n,0x846ca68b);return((n^(n>>>16))>>>0)/4294967296}
 function campaignSeed(){try{const r=new Uint32Array(1);crypto.getRandomValues(r);return r[0]||1}catch{return(Date.now()>>>0)||1}}
 const mystery=()=>MYSTERIES[(save.seed||1)%MYSTERIES.length];
 const campaignVar=(salt)=>seeded(save.seed||1,salt);
 const personality=(index)=>CAT_PERSONALITIES[Math.floor(campaignVar(index+101)*CAT_PERSONALITIES.length)];
-const defaultSave=()=>({version:1,campaignV3:true,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0});
-function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV3?raw.level:raw.level*3)),campaignV3:true,hearts:Math.max(1,Math.min(3,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
+const defaultSave=()=>({version:1,campaignV3:true,campaignV4:true,character:'cat',difficulty:'medium',lives:5,coins:0,coinTaken:[],rolledHouses:[],costumes:[],perk:null,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0});
+function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV4?raw.level:(raw.campaignV3?Math.floor(raw.level/3)*5+raw.level%3:raw.level*5))),campaignV3:true,campaignV4:true,
+ character:Object.hasOwn(HEROES,raw.character)?raw.character:'cat',difficulty:Object.hasOwn(DIFFICULTY,raw.difficulty)?raw.difficulty:'medium',
+ lives:Number.isInteger(raw.lives)?clamp(raw.lives,0,99):5,coins:Number.isInteger(raw.coins)?clamp(raw.coins,0,999999):0,
+ coinTaken:Array.isArray(raw.coinTaken)?raw.coinTaken:[],rolledHouses:Array.isArray(raw.rolledHouses)?raw.rolledHouses:[],costumes:Array.isArray(raw.costumes)?raw.costumes.filter(x=>Object.hasOwn(COSTUMES,x)):[],perk:Object.hasOwn(SMALL_PERKS,raw.perk)?raw.perk:null,
+ hearts:Math.max(1,Math.min(5,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
 let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={};
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
-function updateUI(){const ability=$('special'),power=save.power&&POWERS[save.power];ability.disabled=!power||!!effects.silence;ability.classList.toggle('unlocked',!!power&&!effects.silence);ability.setAttribute('aria-label',power?'Spezialfähigkeit '+power.name+' einsetzen':'Spezialfähigkeit gesperrt – zuerst Verwandlungspilz einsammeln');ability.title=effects.silence?'Magie für '+effects.silence.toFixed(1)+' Sekunden gesperrt':power?'Stufe '+power.rank+' – '+power.attack+': '+power.hint:'Zuerst Verwandlungspilz sammeln';$('special-icon').textContent=power?power.symbol:'🔒';$('special-label').textContent=effects.silence?'FLUCH':power?'STUFE '+power.rank:'GESPERRT';ability.style.setProperty('--power-color',power?power.color:'#c6b6c8');heartsUI.textContent='♥ '.repeat(save.hearts).trim()+' ♡'.repeat(3-save.hearts);mushroomsUI.textContent='🍄 '+save.collected.length+'/'+TOTAL;levelUI.textContent=(save.level+1)+' / '+CHAPTERS.length;chapterUI.textContent=CHAPTERS[save.level].name.toUpperCase();$('sound-toggle').textContent=audioMuted?'♩':'♫';$('sound-toggle').setAttribute('aria-label',audioMuted?'Ton einschalten':'Ton ausschalten')}
+function updateUI(){const ability=$('special'),power=save.power&&POWERS[save.power];ability.disabled=!power||!!effects.silence;ability.classList.toggle('unlocked',!!power&&!effects.silence);ability.setAttribute('aria-label',power?'Spezialfähigkeit '+power.name+' einsetzen':'Spezialfähigkeit gesperrt – zuerst Verwandlungspilz einsammeln');ability.title=effects.silence?'Magie für '+effects.silence.toFixed(1)+' Sekunden gesperrt':power?'Stufe '+power.rank+' – '+power.attack+': '+power.hint:'Zuerst Verwandlungspilz sammeln';$('special-icon').textContent=power?power.symbol:'🔒';$('special-label').textContent=effects.silence?'FLUCH':power?'STUFE '+power.rank:'GESPERRT';ability.style.setProperty('--power-color',power?power.color:'#c6b6c8');heartsUI.textContent='♥'.repeat(save.hearts)+'♡'.repeat(Math.max(0,diff().hearts-save.hearts))+' 🐾'+save.lives;
+ mushroomsUI.textContent='🍄'+save.collected.length+'/'+TOTAL+' 🪙'+save.coins;levelUI.textContent=(save.level+1)+' / '+CHAPTERS.length;chapterUI.textContent=CHAPTERS[save.level].name.toUpperCase();$('sound-toggle').textContent=audioMuted?'♩':'♫';$('sound-toggle').setAttribute('aria-label',audioMuted?'Ton einschalten':'Ton ausschalten')}
 function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);if(r.width<1||r.height<1)return;viewW=HEIGHT*r.width/r.height;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(canvas.width/viewW,0,0,canvas.height/HEIGHT,0,0);ctx.imageSmoothingEnabled=true;if(level)cam=clamp(cam,0,Math.max(0,level.width-viewW))}
 function tone(freq,when,duration,wave='sine',volume=.11,endFreq){if(audioMuted)return;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=wave;o.frequency.setValueAtTime(Math.max(60,freq),when);if(endFreq)o.frequency.exponentialRampToValueAtTime(Math.max(60,endFreq),when+duration);g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(volume,when+.015);g.gain.exponentialRampToValueAtTime(.0001,when+duration);o.connect(g).connect(audioCtx.destination);o.start(when);o.stop(when+duration+.012)}catch{/* Audio unavailable */}}
 function sound(kind){if(audioMuted)return;let now;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();now=audioCtx.currentTime}catch{return}
@@ -215,17 +242,26 @@ function enterDynamicEncounters(){
  }
 }
 function hasSavedGame(){try{return !!localStorage.getItem(SAVE_KEY)}catch{return false}}
+function characterSelect(){
+ phase='menu';
+ presentCard('WÄHLE DEINEN HELDEN','Wer rettet Katzigami?','🐱 🐶 🐔 🐰 🦊','Alle fünf Helden sind gleich stark – aber ihre Angriffe fühlen sich anders an.',Object.entries(HEROES).map(([id,h])=>({label:h.label+' · '+h.blurb,action:()=>difficultySelect(id)})));
+}
+function difficultySelect(character){
+ phase='menu';presentCard('WÄHLE DIE HERAUSFORDERUNG','Wie mutig bist du?','🎲 💖 💀','Echte Lebensanzeige! Sind alle Leben verbraucht, ist dieses Abenteuer vorbei.',
+ Object.entries(DIFFICULTY).map(([id,d])=>({label:(id==='ultra'?'💀':id==='hard'?'🔥':id==='medium'?'🌸':'💗')+' '+d.name+' · '+d.lives+' Leben · '+d.hearts+' Herzen',
+ action:()=>{save=defaultSave();save.character=character;save.difficulty=id;save.lives=d.lives;save.hearts=d.hearts;persist();enterLevel(0,true)}})));
+}
 function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABENTEUER','KATZIGAMI ✿','🐱 🍄 🌸','Momo sucht sieben Pilze und ein neues Geheimnis bei jedem Durchlauf. Du kannst andere Katzen mit selbst geschriebenen Antworten überzeugen – und jede Patrouille reagiert anders. Welche Wendung wartet wohl heute?',[
  ...(hasSavedGame()? [{label:save.won?'🌸 Noch einmal das Finale / weiterspielen':'🐾 Spielstand fortsetzen',action:()=>enterLevel(save.level,true)}]:[]),
- {label:'✿ Neues Abenteuer beginnen',action:()=>{save=defaultSave();persist();enterLevel(0,true)}},
+ {label:'✿ Neues Abenteuer beginnen',action:characterSelect},
  {label:'🎮 So spielt man',secondary:true,action:help}
  ]);
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Durchquere zwölf lange Level in vier Retro-Anime-Welten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über Momos Kopf. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=Math.max(1,save.hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
- const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type];return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp:t.hp,maxHp:t.hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
+ const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type],hp=Math.max(1,Math.ceil(t.hp*diff().enemyHp));return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp,maxHp:hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
  for(let x=d.width-680;x>d.width-2100&&x>650;x-=420){if(!d.gaps.some(([a,b])=>x>a-65&&x<b+55))positions.push(x)}
  let enemies=positions.map((x,j)=>makeEnemy(x,j,j===0?'scout':ENEMY_MAP[act][(j+Math.floor(campaignVar(i*100+j)*ENEMY_MAP[act].length))%ENEMY_MAP[act].length]));
  // Each new adventure has distinct patrols, without moving mandatory collectibles.
@@ -272,7 +308,7 @@ function checkEndOfLevel(){if(phase!=='playing')return;if(isFinal(save.level)){i
  {label:'🔥 Brief zuklappen – ich entscheide selbst!',action:()=>{save.flags.readLetter=false;nextChapter('Momo: »Spoiler sind schlimmer als Gurken!«')}}
  ]})}
 }
-function nextChapter(msg){toast(msg);save.level++;save.hearts=3;save.checkpoint=0;persist();sound('meow');enterLevel(save.level,true)}
+function nextChapter(msg){toast(msg);save.level++;save.hearts=diff().hearts;save.checkpoint=0;persist();sound('meow');enterLevel(save.level,true)}
 function bossTalk(){if(phase!=='playing'||boss.triggered)return;boss.triggered=true;const empathic=!!save.flags.readLetter,canOffer=save.collected.length>=5;let options=[];
  if(empathic){options.push({label:'💞 »Ich weiß, wer du bist. Komm mit, Zukunfts-Momo.«',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Du hast mich … nicht gehasst?«')}})}
  else if(canOffer){options.push({label:'🍄 Einen Pilz teilen – Frieden?',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Ist das … Käsegeschmack?!«')}})}
@@ -308,7 +344,7 @@ function transform(item){
   toast('✨ UPGRADE! STUFE '+next.rank+' · '+next.name+' · '+next.hint);
   sound('transform');burst(item.x,item.y,next.color,50);resetMusic();
  }else{
-  save.hearts=Math.min(3,save.hearts+1);toast('🍄 Pilzbonus! Deine Stufe '+previous+' bleibt erhalten. +1 Herz!');
+  save.hearts=Math.min(diff().hearts,save.hearts+1);toast('🍄 Pilzbonus! Deine Stufe '+previous+' bleibt erhalten. +1 Herz!');
   sound('pick');burst(item.x,item.y,next.color,20);
  }
  persist();updateUI();if(navigator.vibrate)navigator.vibrate([35,40,45]);
@@ -390,7 +426,7 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
   const info=ENEMY_TYPES[e.type];e.inv=Math.max(0,e.inv-dt);
   const playerDist=Math.abs(player.x-e.x);
   const chase=(e.type==='ninja'||e.type==='guardian')&&playerDist<320;
-  const patrol=e.base+Math.sin(clock*info.speed+e.seed*2.2)*e.range;
+  const patrol=e.base+Math.sin(clock*info.speed*diff().enemySpeed+e.seed*2.2)*e.range;
   const delta=chase?Math.sign(player.x-e.x)*(e.type==='ninja'?180:58)*dt:0;
   e.x=clamp(patrol+delta,e.base-e.range-65,e.base+e.range+65);
   // Phantoms appear and disappear; ninjas sprint; archers attack from a distance.
