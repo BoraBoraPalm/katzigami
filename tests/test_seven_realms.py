@@ -82,6 +82,7 @@ with sync_playwright() as p:
  # Mountains: moving rockfalls and avalanches are not static art.
  call('enterLevel(18)')
  rock=next(e for e in call('realmState().events') if e['kind']=='rock')
+ call('position('+str(rock['x']-30)+',260)')
  step(.33)
  rock2=next(e for e in call('realmState().events') if e['kind']=='rock')
  assert rock2['y']!=rock['y'],(rock,rock2)
