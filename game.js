@@ -558,7 +558,7 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
  drawEffects();drawStatusTimers();
  if(powerFlash>0){ctx.save();ctx.globalAlpha=powerFlash*.14;ctx.fillStyle=POWERS[save.power]?.color||'#fff';ctx.fillRect(0,0,viewW,HEIGHT);ctx.restore()}
  ctx.restore()}
-function frame(now){try{if(!lastFrame)lastFrame=now;const dt=Math.min(.034,(now-lastFrame)/1000);lastFrame=now;if(level){simulate(dt);drawWorld()}else {level=makeLevel(0);drawWorld()}musicTick();if(performance.now()>toastUntil)$('toast').classList.remove('show')}catch(err){console.error('Katzigami frame:',err)}requestAnimationFrame(frame)}
+function frame(now){try{if(!lastFrame)lastFrame=now;const elapsed=Math.min(.14,Math.max(0,(now-lastFrame)/1000));lastFrame=now;if(level){let remaining=elapsed;while(remaining>0.00001){const step=Math.min(1/60,remaining);simulate(step);remaining-=step}drawWorld()}else {level=makeLevel(0);drawWorld()}musicTick();if(performance.now()>toastUntil)$('toast').classList.remove('show')}catch(err){console.error('Katzigami frame:',err)}requestAnimationFrame(frame)}
 function bindControl(id,key){const el=$(id),pointers=new Set();const release=e=>{pointers.delete(e.pointerId);if(!pointers.size){vxInput[key]=false;el.classList.remove('pressed')}};
  el.addEventListener('pointerdown',e=>{e.preventDefault();if(phase!=='playing')return;try{el.setPointerCapture(e.pointerId)}catch{}pointers.add(e.pointerId);vxInput[key]=true;el.classList.add('pressed');if(key==='jump')jump();if(audioCtx?.state==='suspended')audioCtx.resume()});
  for(const event of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(event,release);
