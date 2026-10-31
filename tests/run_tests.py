@@ -68,7 +68,7 @@ with sync_playwright() as p:
             click(page,0)
             check(snapshot(page)['boss']['done'],'compassion did not resolve mirror')
         finish(page,width-105)
-        if i==11:
+        if i==19:
             check(snapshot(page)['phase']=='dialogue','final choice missing')
             click(page,0)
             break
@@ -91,9 +91,9 @@ with sync_playwright() as p:
     # Alternate route: reject the friends, then fight the high-health mirror boss.
     page,errors=load(browser)
     click(page,0);click(page,0);click(page,1);click(page,1)
-    for i in range(12):
+    for i in range(20):
         width=snapshot(page)['width']
-        if i==11:
+        if i==19:
             pos(page,width-410)
             check(snapshot(page)['phase']=='dialogue','combat boss intro missing')
             buttons=page.locator('.story-button').all_text_contents()
@@ -107,10 +107,10 @@ with sync_playwright() as p:
                 page.evaluate('window.__katzigamiTest.step(.36)')
             check(snapshot(page)['boss']['done'],'boss did not fall after repeated hits')
         finish(page,width-105)
-        if i==11:
+        if i==19:
             click(page,1)
             break
-        if i in (2,5,8):click(page,1)
+        if i in (4,9,14):click(page,1)
         if snapshot(page)['phase']=='dialogue':click(page,0)
     check(snapshot(page)['ending']=='MOND-ENDE','alternate ending not saved')
     check(not errors,f'JS errors on alternate route: {errors}')
