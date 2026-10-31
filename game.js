@@ -1345,7 +1345,10 @@ function tickRealmBefore(dt){
   const near=Math.abs(player.x-o.x)<390;
   if(o.kind==='door'&&near){
    const opening=Math.sin(clock*1.5+o.phase)>.25;
-   if(opening&&!o.opened){o.opened=true;spawnBiomeEnemy('ghost',o.x+40,386);biomeSplash('castle',o.x,400,10);sound('choice')}
+   if((opening&&!o.opened)||(near&&Math.abs(player.x-o.x)<115&&!o.everOpened&&o.timer>.6)){
+    o.opened=true;o.everOpened=true;const visitor=spawnBiomeEnemy('ghost',o.x+40,386);
+    if(visitor){visitor.doorX=o.x;visitor.ttl=8}
+    biomeSplash('castle',o.x,400,10);sound('choice')}
    if(!opening)o.opened=false;
    o.state=opening?'open':'closed';
   }
@@ -1527,12 +1530,15 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;tic
  enemyShots=enemyShots.filter(m=>m.life>0&&m.x>cam-200&&m.x<cam+viewW+200);
  for(const fx of particles){fx.x+=fx.vx*dt;fx.y+=fx.vy*dt;fx.vy+=210*dt;fx.life-=dt}particles=particles.filter(f=>f.life>0);
  for(const e of level.enemies){if(e.dead)continue;
+  if(e.ttl!==undefined){e.ttl-=dt;if(e.ttl<=0){e.dead=true;biomeSplash('castle',e.doorX??e.x,e.y,7);continue}}
+  if(e.type==='vampire')e.baseY=Math.min(407,e.baseY+250*dt);
   const info=ENEMY_TYPES[e.type];e.inv=Math.max(0,e.inv-dt);
   const playerDist=Math.abs(player.x-e.x);
   const chase=(e.type==='ninja'||e.type==='guardian')&&playerDist<320;
   const patrol=e.base+Math.sin(clock*info.speed*diff().enemySpeed+e.seed*2.2)*e.range;
   const delta=chase?Math.sign(player.x-e.x)*(e.type==='ninja'?180:58)*dt:0;
   e.x=clamp(patrol+delta,e.base-e.range-65,e.base+e.range+65);
+  if(e.ttl!==undefined&&e.ttl<1.5)e.x+=(e.doorX-e.x)*.15;
   // Phantoms appear and disappear; ninjas sprint; archers attack from a distance.
   if(e.type==='ninja'&&playerDist<240)e.x+=Math.sign(player.x-e.x)*Math.min(85*dt,Math.abs(player.x-e.x)*.2);
   if((e.type==='archer'||e.type==='guardian')&&playerDist<410){
@@ -1732,6 +1738,24 @@ function drawRealmObjects(){
  if(!level?.realm)return;
  const R=level.realm,id=R.id;
  if(id==='sea'){
+
+  // A distinct dry, explorable city bubble interrupts swimming physics.
+  const cityX=Math.min(level.width-900,1850)-cam;
+  ctx.save();ctx.translate(cityX,0);
+  ctx.globalAlpha=.54;ctx.fillStyle='#99e8df';ctx.beginPath();ctx.ellipse(370,794,560,290,0,Math.PI,0);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;
+  for(let k=0;k<9;k++){
+   const xx=k*98,high=150+k%3*70;
+   round(xx,942-high,67,high,9,'#d4c69d','#f0e9c6',4);
+   for(let j=0;j<3;j++){round(xx+10,942-high+21+j*35,49,26,12,'#86c0bc','#ffecb2',2)}
+   ctx.beginPath();ctx.moveTo(xx-12,942-high);ctx.lineTo(xx+34,909-high);ctx.lineTo(xx+81,942-high);ctx.closePath();
+   ctx.fillStyle='#e5d3a4';ctx.fill();
+  }
+  for(let k=0;k<12;k++){const xx=k*78-24;ellipse(xx,950,17,9,'#7db7a4');ellipse(xx,946,8,12,'#e4b0bd')}
+  ctx.fillStyle='#f8e8bf';ctx.textAlign='center';ctx.font='bold 31px Georgia,serif';ctx.fillText('ATLANTIS',372,661);
+  round(330,837,84,104,42,'#e4d2a4','#fff4cc',5);round(342,849,60,90,30,'#779da0','#e8f4cc',3);
+  ctx.restore();
+
   // An oxygen tether physically follows a lagging submarine.
   const x=R.subX-cam,y=R.subY;
   ctx.save();ctx.strokeStyle='#fee3a9';ctx.lineWidth=5;ctx.setLineDash([12,6]);ctx.beginPath();ctx.moveTo(x+42,y);ctx.quadraticCurveTo((x+player.x-cam)*.5,y+68,player.x-cam+20,player.y+15);ctx.stroke();ctx.setLineDash([]);
@@ -1886,7 +1910,7 @@ function realmHUD(){
  if(R.id==='snow'&&snowWaterAt(player.x+20)&&player.y>355){info='🥶 ERFRIEREN: '+R.cold.toFixed(1)+' s';color='#e7faff'}
  if(R.id==='race'){info='🏎️ RIVALE: '+Math.max(0,Math.round(level.width-115-R.raceX))+' m · '+R.raceClock.toFixed(1)+' s';color='#ffefae'}
  if(R.id==='moon')info='🌙 ¼ GRAVITATION · METEORITEN';
- if(R.id==='sea'){info='🫧 LUFT: '+R.oxygen.toFixed(1)+' s · SCHLAUCH';color=R.oxygen<7?'#ffb4af':'#b6f6ee'}
+ if(R.id==='sea'){info=inAtlantis()?'🏛️ ATLANTIS · TROCKENE STADT':'🫧 LUFT: '+R.oxygen.toFixed(1)+' s · SCHLAUCH';color=R.oxygen<7?'#ffb4af':'#b6f6ee'}
  if(R.id==='jungle'&&R.vine)info='🌿 SCHWINGEN: ◀ ▶ · SPRUNG LOSLASSEN';
  if(info){round(11,113,Math.min(viewW-22,325),30,10,'#263a5cde','#ffffff55',1.5);ctx.font='800 12px Nunito,sans-serif';ctx.fillStyle=color;ctx.fillText(info,21,132)}
  ctx.restore();
