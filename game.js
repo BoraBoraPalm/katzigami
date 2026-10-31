@@ -535,7 +535,9 @@ function applyConversation(name,answer){
  if(ally)save.flags['ally'+save.level]=true;
  if(hostile)save.flags['rival'+save.level]=true;
  persist();
- const phrase=REACTIONS[intent][Math.floor(campaignVar(save.encounters*13+name.length)*REACTIONS[intent].length)];
+ const replyPool=[...REACTIONS[intent],...NEW_REACTION_LINES[intent]];
+ const picked=drawNewDialogue('reaction-'+intent,replyPool);
+ const phrase=picked?.entry||('Ich werde über deine Antwort nachdenken, '+name+' merkt sich deinen Standpunkt. Begegnung '+save.encounters+'.');
  return {intent,relation,reply:name+' ('+mood+'): »'+phrase+'«',effect:ally?'Verbündete bauen eine Abkürzung!':hostile?'Eine Schattenpatrouille ist misstrauisch geworden.':'Deine Antwort wird den weiteren Weg verändern.'};
 }
 // Dialogue deck: individually authored encounters, not repeated three-button templates.
@@ -1186,22 +1188,189 @@ function drawChallenges(){
   ctx.restore();
  }
 }
+
+const ARC_OPENING_VARIATIONS={
+ 1:[
+ ['Die verschwundene Unterschrift','Ein königlicher Befehl wird vor deinen Augen durchsichtig. Miso packt dich am Ärmel: »Wenn Nox Namen löschen kann, wer schreibt dann unsere Zukunft?«','🧭 Den Spuren ins Wurzelreich folgen'],
+ ['Ein Wald, der zuhört','Tief zwischen den Wurzeln hallt Pips Stimme, obwohl Pip gar nicht da ist. Ein verzauberter Brief fällt aus einem Ast.','🌲 Die falsche Stimme entlarven'],
+ ['Miso kennt einen Ausweg','Miso bringt eine zerrissene Karte. Auf der Rückseite steht das Siegel des Uhrmeisters, nicht das der Königin.','🗺️ Die Karte Stück für Stück zusammensetzen'],
+ ['Die erste Lüge','Auf einer Tafel steht »Dahlia ist schuld«. Jemand streicht mit einer Kralle die Worte durch und schreibt »Fragt Nox«.','🔍 Die heimliche Nachricht verfolgen'],
+ ['Rauch aus den Wurzeln','Ein Baum hustet schwarzes Uhrwerköl. Yuki flüstert: »Bäume rauchen nicht. Außer jemand lügt.«','🍃 Den verletzten Wald untersuchen'],
+ ['Die Nacht der gefälschten Briefe','Hunderte Briefumschläge fallen vom Himmel. Jeder behauptet etwas anderes, aber alle haben dieselbe Handschrift.','✉️ Den echten Absender finden']
+ ],
+ 2:[
+ ['Das Sanduhrgeständnis','Dahlia legt wortlos eine Sanduhr auf den Tisch. Drinnen schweben die Farben der verschwundenen Blumen.','⌛ Die Wahrheit hinter der Sanduhr verstehen'],
+ ['Ein Königreich aus Zuckerstaub','Über dem Zuckermond glitzert Regen, doch auf jedem Tropfen steht ein Name, den Nox vergessen machen wollte.','🌙 Die verlorenen Namen retten'],
+ ['Pip zweifelt zum ersten Mal','»Vielleicht war mein Brief gefälscht«, gibt Pip leise zu. »Aber wenn ich falschlag, wem habe ich geschadet?«','💌 Pips neue Spur verfolgen'],
+ ['Das verbotene Sternenfenster','Ein Sternenfenster zeigt Dahlia allein vor der verstummten Uhr. Sie weint, während die Farben im Glas verschwinden.','🌟 Hinter das Sternenfenster sehen'],
+ ['Zwischen Schuld und Mut','Dahlia sagt: »Ich habe etwas gerettet und dabei vieles zerstört.« Niemand im Raum weiß, was man darauf antworten soll.','👑 Die Königin weiter anhören'],
+ ['Der Augenblick vor dem Stillstand','Ein Kristall bewahrt den letzten Augenblick vor Nox’ Zauber. Darin ist eine unbekannte Schattenkatze zu sehen.','🔮 Die Kristall-Erinnerung entschlüsseln']
+ ],
+ 3:[
+ ['Das Kind hinter dem Spiegel','Ein kleines Kätzchen zeichnet die Herzuhr an die Wand. Sobald du näher kommst, verschwindet es im Spiegel.','🪞 Der verschwundenen Katze folgen'],
+ ['Eine Zukunft ohne Abschied','In der Uhr liegen Briefe, die nie abgeschickt wurden. Auf jedem steht dieselbe Bitte: »Bleib.«','💌 Die unbeantworteten Briefe lesen'],
+ ['Nox zeigt sein Gesicht','Die goldene Maske des Uhrmeisters fällt auf den Boden. Darunter ist kein Monster, sondern ein Kater, der sich vor Kontrollverlust fürchtet.','🕰️ Nox’ Vergangenheit aufdecken'],
+ ['Der letzte Takt','Die siebte Glocke schlägt einmal. Spiegel-Momo flüstert: »Wenn du sie wieder läuten lässt, muss ich loslassen.«','🔔 Den letzten Glockenschlag verfolgen'],
+ ['Das zerbrochene Versprechen','Eine Stimme aus dem Uhrwerk sagt: »Nie wieder Abschied.« Die Wände antworten: »Dann nie wieder Anfang.«','🌌 Das Versprechen hinterfragen'],
+ ['Die eine richtige Frage','Dahlia sagt: »Frag Spiegel-Momo nicht, warum sie böse ist. Frag, wovor sie Angst hat.«','💗 Mit offenem Herzen zum Spiegel gehen']
+ ]
+};
+const FRIEND_GREETING_VARIATIONS={
+ Pip:[
+ 'Mit einem Berg ungeöffneter Briefe rennt Pip auf dich zu, stolpert und verbeugt sich trotzdem würdevoll.',
+ 'Pip hält ein Fernrohr verkehrt herum. »Ich kann die Gefahr sehen! Sie ist überraschend klein.«',
+ 'Ein Brief flattert aus Pips Tasche. Darin steht: »Vertraue niemandem, der keine Fragen stellt.«',
+ 'Pip hat drei verschiedene Hüte dabei und fragt, welcher ihn glaubwürdiger macht.',
+ 'Auf Pips Schnurrhaaren klebt Siegelwachs. Er gesteht, einen geheimen Boten getroffen zu haben.',
+ 'Pip flüstert aus einer leeren Holzkiste: »Guter Trick, oder? Niemand vermutet einen Postboten.«'
+ ],
+ Yuki:[
+ 'Yuki pflückt ein Blatt aus deinem Fell. Darauf steht eine Karte, die gestern noch nicht existierte.',
+ 'Yuki kommt aus einer Baumwurzel geklettert und trägt eine Laterne voller Glühwürmchen.',
+ 'Yuki zeigt auf zwei identische Pilze: »Einer lügt. Der andere ist sehr höflich.«',
+ 'Mit schmutzigen Pfoten legt Yuki eine frische Spur auf den Boden: »Hier war Nox.«',
+ 'Yuki summt eine Walddmelodie. Die Blätter stimmen ein, aber eines singt einen falschen Ton.',
+ 'Yuki hat ein Moosbuch gefunden, dessen Seiten nur auf neugierige Fragen reagieren.'
+ ],
+ Miso:[
+ 'Miso springt aus einem Fass. »Bin nicht geflüchtet! Ich habe nur die Innenseite untersucht.«',
+ 'Miso legt dir eine Kartenhälfte hin und versteckt die andere grinsend hinter dem Rücken.',
+ 'Mit einer zerzausten Mähne berichtet Miso von einem geheimen Wachwechsel.',
+ 'Miso schiebt dir einen kalten Fischkeks zu: »Für gefährliche Entdeckungen braucht man Proviant.«',
+ 'Miso weist auf einen Fußabdruck. Er gehört einer Katze, die angeblich seit hundert Jahren verschwunden ist.',
+ 'Miso hat einen kleinen Schlüssel gestohlen und will wissen, ob du seinem Besitzer vertraust.'
+ ],
+ Tavi:[
+ 'Tavi steckt mit dem Kopf in einer Maschine. Die Maschine trägt inzwischen Tavis Hut.',
+ 'Tavi zeigt stolz einen selbstgebauten Kompass, dessen Nadel vor Nox’ Uhr zuckt.',
+ 'Auf Tavis Werkbank liegt ein Zahnrad, das gegen die Zeit läuft.',
+ 'Tavi kommt mit rauchenden Pfoten angerannt: »Es war ein kontrolliertes Experiment. Ungefähr.«',
+ 'Ein Miniaturroboter von Tavi hüpft vor dir herum und ruft deinen Namen.',
+ 'Tavi hat eine Brücke aus Zahnrädern erfunden, die sich nur bei freundlichen Worten bewegt.'
+ ],
+ Dahlia:[
+ 'Dahlia ist ohne Krone gekommen. »Heute möchte ich zuerst zuhören und dann herrschen«, sagt sie.',
+ 'Die Königin bietet dir eine Tasse Tee an. Auf dem Boden der Tasse erscheint eine fremde Stadt.',
+ 'Dahlia trägt eine kleine Sanduhr, die an deine Schritte angepasst ist.',
+ 'Ohne ihre Leibgarde wirkt Dahlia plötzlich müde. »Fehler werden nicht kleiner, wenn man sie verschweigt.«',
+ 'Eine alte Blüte fällt aus Dahlias Mantel. Sie ist die letzte, die ihre Farbe behalten hat.',
+ 'Dahlia zeigt dir einen Brief, den sie nie an Pip abgeschickt hat.'
+ ]
+};
+const NEW_REACTION_LINES={
+ kind:[
+  'Ich hätte nicht gedacht, dass heute jemand freiwillig hilft. Mein geheimer Weg gehört dir.',
+  'Dann teilen wir das Risiko. Alleine hatte ich ziemlich zittrige Pfoten.',
+  'Du rettest nicht nur das Schloss. Du rettest auch meinen Mut.',
+  'Hoffnung klingt kitschig, aber gerade funktioniert sie erstaunlich gut.',
+  'Eine warme Antwort in dieser kalten Welt? Das merke ich mir.',
+  'Dafür erzähle ich dir etwas, das die Wachkatzen nicht wissen.',
+  'Du hast eine einfache Sache getan, die Nox nie verstanden hat: zugehört.',
+  'Ich dachte, niemand bemerkt mich mehr. Danke, dass du geblieben bist.',
+  'Wenn wir zusammenhalten, verliert sogar die Uhr ein bisschen Angst.',
+  'Gut. Ich nehme die sichere Route, du bekommst die geheime Karte.',
+  'Du lässt niemanden zurück. Ich will genauso mutig sein wie du.',
+  'Es gibt noch gute Herzen, selbst wenn alle Glocken schweigen.'
+ ],
+ brave:[
+  'Na schön, du gehst voran und ich halte dir den Rücken frei!',
+  'Dein Mut ist ansteckend. Hoffentlich nicht meldepflichtig.',
+  'Die Schattenwache wird das gar nicht lustig finden. Ich schon.',
+  'Dann machen wir keinen Rückzug. Nur einen sehr strategischen Anlauf.',
+  'Ich habe Angst, aber ich komme mit, wenn du den ersten Schritt machst.',
+  'Wer so entschlossen ist, sollte besser seine Pfoten gut im Blick behalten.',
+  'Dann zeig Nox, dass eine Zukunft niemandem gehört!',
+  'Ich lenke die Wachkatzen ab. Bitte frag nicht nach meinem Plan.',
+  'Manche Türen öffnen sich erst, wenn man ihren Wächter herausfordert.',
+  'Dein Kampfgeist könnte die letzte Glocke aufwecken.',
+  'Ich warte nicht länger auf Rettung. Ich helfe beim Kampf.',
+  'Gut! Aber bitte nicht die einzige Brücke dabei zerlegen.'
+ ],
+ curious:[
+  'Du bemerkst Dinge, die die meisten für Kulisse halten. Sieh hinter die Uhr.',
+  'Gute Frage. Jetzt weiß ich, wonach wir wirklich suchen müssen.',
+  'Unter dem Staub liegt ein zweites Siegel. Das ist verdächtig.',
+  'Der genaue Zeitpunkt ist wichtig. Nox war vor Dahlia hier.',
+  'Warte, ich habe dieselbe Handschrift auf einem anderen Brief gesehen.',
+  'Das passt nicht zu Pips Erzählung. Vielleicht hat er sich täuschen lassen.',
+  'Eine versteckte Karte? Ich habe einen Teil davon in der Tasche.',
+  'Manchmal ist eine Frage gefährlicher als jede Zauberkugel.',
+  'Ich würde diese Spur nicht ignorieren. Sie führt unter die Erde.',
+  'Du denkst wie eine Detektivin. Und zum Glück riechst du besser.',
+  'Achte auf die sieben Glocken. Eine davon tickt anders.',
+  'Wenn wir die Zeiten vergleichen, können wir Nox’ Lüge entlarven.'
+ ],
+ funny:[
+  'Ich wollte ernst bleiben, aber jetzt lacht sogar mein Schatten.',
+  'Du bist unmöglich. Genau die richtige Gesellschaft für eine Zeitkrise.',
+  'Einen Moment – ich muss erst meinen Lachanfall aus der Uhr befreien.',
+  'Mein Bauch tut weh. Zum ersten Mal heute nicht vor Angst!',
+  'Wenn Nox uns hört, hält er die Zeit aus reiner Verwirrung an.',
+  'Jetzt ist mir klar, warum Geister keine Komiker mögen. Zu viel Durchblick.',
+  'Ich habe deine Pointe nicht verstanden, aber sie klingt gefährlich lecker.',
+  'Ein guter Witz! Dafür gibt es einen Hinweis und einen halben Keks.',
+  'Bitte erzähl das später Dahlia. Sie hat seit Jahren nicht gelacht.',
+  'Die Schattenwache hat gerade vor Lachen ihre Helme verloren.',
+  'Wenn wir schon untergehen, dann wenigstens mit einem guten Kalauer.',
+  'Großartig. Ich lache und du hältst Ausschau nach fallenden Kronleuchtern.'
+ ],
+ skeptical:[
+  'Misstrauen ist nicht falsch. Aber prüf erst die Beweise, bevor du jemanden verurteilst.',
+  'Dann gehen wir getrennte Wege. Vielleicht überzeugt dich später die Wahrheit.',
+  'Ich sehe, dass du mir nicht glaubst. Ich würde an deiner Stelle dasselbe tun.',
+  'Du hast recht, vorsichtig zu sein. Nox lebt von allzu schnellen Urteilen.',
+  'Ich kann dir keinen Beweis aufzwingen. Der Weg nach vorne bleibt offen.',
+  'Das ist hart. Ich dachte, du würdest mir wenigstens zuhören.',
+  'Deine Zweifel werde ich nicht vergessen. Meine Hinweise aber auch nicht.',
+  'Wenn du alleine gehst, pass besonders auf die nächste Falle auf.',
+  'Vielleicht bin ich tatsächlich im Irrtum. Dann müssen wir das herausfinden.',
+  'Ich werde dich nicht aufhalten. Der Uhrmeister vielleicht schon.',
+  'Vertrauen lässt sich nicht würfeln, auch nicht mit sechs goldenen Seiten.',
+  'Gut, dann zeige ich dir keine Abkürzung. Noch nicht.'
+ ],
+ inventive:[
+  'Daran hat bisher niemand gedacht. Ich muss meinen Plan sofort umschreiben.',
+  'Was für eine seltsame Idee! Sie könnte tatsächlich funktionieren.',
+  'Moment, das eröffnet einen Weg, den meine Karte gar nicht kennt.',
+  'Ich mag Leute, die Regeln hinterfragen. Außer die Schwerkraft.',
+  'So etwas Ungewöhnliches hört man nicht einmal in Atlantis.',
+  'Ich probiere deinen Einfall aus und komme mit neuen Hinweisen zurück.',
+  'Du denkst um drei Kurven. Das verwirrt Nox bestimmt.',
+  'Aus deiner Idee mache ich eine neue Skizze. Vielleicht sogar eine Brücke.',
+  'Das klingt verrückt, aber die Herzuhr tickt gerade einmal extra.',
+  'Ich kann nicht versprechen, dass es funktioniert. Aber ich möchte dabei sein.',
+  'Eine neue Lösung ist besser als ein alter Fehler.',
+  'Du hast mich gerade an ein vergessenes Experiment erinnert. Danke!'
+ ]
+};
+
 function startDialog(i){
  if(i===0){
-  const name=hero().name;
-  dialog({tag:'PROLOG · DIE SIEBEN ZEITGLOCKEN',title:hero().name+' und das gestohlene Morgen',portrait:hero().icon+' 🌸 🕰️',
-   body:openingForHero()+' Die Blumen werden grau und Katzenwächter sperren die Wege. Pilzbote Pip beschuldigt Königin Dahlia – doch auf seinem Befehl steht heimlich das Zeichen des Uhrmeisters NOX. Finde sieben Orakelpilze, rette die Herzuhr und entscheide, wem du glaubst.',
-   options:[
-    {label:'💗 Erst die Bewohner retten!',action:()=>{save.flags.cake=true;persist();resume();toast(name+': »Ich lasse niemanden zurück!«')}},
-    {label:'⚔️ Schnell zu den sieben Zeitglocken!',action:()=>{save.flags.hero=true;persist();resume();toast(name+': »Die Zeit wartet nicht!«')}}
-   ]});return;
+  const name=hero().name,scene=drawNewDialogue('opening',OPENING_SCENES);
+  const [title,event,first,second]=scene?.entry||OPENING_SCENES[0];
+  const common=' Die sieben Orakelpilze können die Herzuhr wieder erwecken. Pip beschuldigt Dahlia, aber Nox’ Uhrensiegel taucht auf seinem Brief auf. Du musst herausfinden, was wirklich passiert ist.';
+  const choices=[first,second].map((label,index)=>({label,action:()=>{
+   if(label.includes('💗'))save.flags.cake=true;
+   else if(label.includes('🔍'))save.flags.detective=true;
+   else save.flags.hero=true;
+   persist();resume();
+   toast(name+(index===0?' beginnt seine eigene Spur!':' macht sich entschlossen auf den Weg!'));
+  }}));
+  dialog({tag:'PROLOG · DAS GESTOHLENE MORGEN',
+    title:title,portrait:hero().icon+' 🌸 🕰️',
+    body:escapeText(openingForHero()+' '+event+common),options:choices});
+  return;
  }
  if(i%5!==0){resume();return}
  const act=actOf(i),arc=STORY_ARCS[act];let branch='';
  if(act===1)branch=save.flags.helpedMiso?'Du hast Miso gerettet. Sie hilft dir, Nox’ gefälschte Befehle zu finden.':'Miso ist verletzt, weil du die Karte gewählt hast. Sie bewacht nun eine Abkürzung.';
  if(act===2)branch=save.flags.trustedQueen?'Dahlia zeigt dir einen geheimen Mondsteg und überreicht Beweise.':'Du vertraust Pip. Dahlia verweigert dir einen sicheren Weg, aber du kannst Beweise selbst suchen.';
  if(act===3)branch=save.flags.readLetter?'Du kennst Spiegel-Momos Trauer und kannst mit ihr sprechen.':'Du hast den Brief nicht gelesen. Die Schattenkatze bleibt rätselhaft, aber ein Pilz könnte Frieden stiften.';
- dialog({tag:'AKT '+(act+1)+' · '+arc.title,title:arc.place,portrait:arc.portrait,body:arc.beat+' '+branch+' '+mystery().clue,options:[{label:'🐾 Der Spur folgen!',action:resume}]});
+ const choice=drawNewDialogue('act-'+act,ARC_OPENING_VARIATIONS[act]||ARC_OPENING_VARIATIONS[3]);
+ const [title,event,continueLabel]=choice?.entry||['Das nächste Geheimnis',mystery().clue,'🐾 Der Spur folgen'];
+ dialog({tag:'AKT '+(act+1)+' · '+arc.title,title:title,portrait:arc.portrait,
+   body:escapeText(event+' '+arc.beat+' '+branch+' '+mystery().clue),
+   options:[{label:continueLabel,action:resume}]});
 }
 function checkEndOfLevel(){if(phase!=='playing')return;
  if(level.realm?.id==='race'&&level.realm.raceX>=level.width-118){loseLife('🏁 Dein Renngegner hat gewonnen!');level.realm.raceX=80;level.realm.raceClock=0;return}if(isFinal(save.level)){if(!boss.done){toast('Ein magischer Spiegel versperrt den Ausgang!');player.x=Math.min(player.x,level.width-230);return}endChoice();return}
