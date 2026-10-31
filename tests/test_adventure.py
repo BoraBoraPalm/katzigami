@@ -26,21 +26,12 @@ with sync_playwright() as p:
  page.locator('.save-name-form button').click()
  assert call('slots()')[0]['name']=='Mein erstes Abenteuer'
  assert 'Mein erstes Abenteuer' in page.locator('#overlay-content').inner_text()
- # Different worlds must actually contain different traversal devices.
- seen={}
- for lev,expected in [(0,{'blossom','updraft'}),(5,{'vine','root'}),(10,{'ice','jelly'}),(15,{'pendulum','shutter','gear'})]:
+ # Seven genuinely different worlds now replace the repeated flower/jelly patterns.
+ expected=[(0,'castle',{'door','painting','vampire'}),(3,'snow',{'thinIce','igloo'}),(6,'jungle',{'vine','banana'}),(9,'race',{'boost','hurdle','oil'}),(12,'moon',{'meteor','ufo'}),(15,'sea',{'dome','coral','current'}),(18,'mountain',{'wind','rock','avalanche'})]
+ for lev,biome,hazards in expected:
   call('enterLevel('+str(lev)+')')
-  devices=call('challengeDebug()')
-  kinds={o['type'] for o in devices}
-  assert expected.issubset(kinds),(lev,kinds,expected)
-  seen[lev]=kinds
- assert call('challengeTouch("pendulum")') is False # Hazard is timed, not a collectable.
- call('enterLevel(5)')
- assert call('challengeTouch("vine")'), 'Touching a forest root switch should grow a bridge.'
- assert any(x['active'] for x in call('challengeDebug()') if x['type']=='vine')
- call('enterLevel(0)')
- assert call('challengeTouch("blossom")'), 'Pollen pads must bounce if jump is held.'
- assert snap()['player']['vy']<0
+  assert call('realmState().id')==biome,(lev,call('realmState().id'))
+  assert hazards.issubset({q['kind'] for q in call('realmState().events')}),(biome,call('realmState().events'))
  # A manual save remembers coins, current chapter and location.
  call('enterLevel(6)')
  call('setCoins(225)')
