@@ -585,6 +585,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   reset:()=>{localStorage.removeItem(SAVE_KEY);save=defaultSave();menu()},
   setFlag:(k,v)=>{save.flags[k]=v;persist()},
   enterLevel:(i)=>enterLevel(i,false),
+  isolateEnemy:(id,x=540)=>{const e=level.enemies.find(e=>e.id===id);if(!e)return false;for(const other of level.enemies)if(other!==e)other.dead=true;e.base=x;e.x=x;e.range=0;e.y=411;e.hp=1;e.maxHp=1;e.inv=0;return true},
   damageEnemy:(id,damage=1)=>{const e=level.enemies.find(e=>e.id===id);return e?hitEnemy(e,damage,e.x,e.y):false},
   damageBoss:(damage=1)=>hitBoss(damage,boss.x,boss.y),
   giveCharm:(kind)=>{if(!CHARMS[kind])return false;takeCharm({kind,x:player.x+20,y:player.y+20,taken:false});return true},
