@@ -1,5 +1,5 @@
 /* Optional offline shell for installable mobile gameplay (same-origin assets only). */
-const VERSION = 'katzigami-paw-9-seven-worlds';
+const VERSION = 'katzigami-paw-10-dialogue-deck';
 const FILES = ['./','./index.html','./style.css','./game.js','./manifest.webmanifest','./favicon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
