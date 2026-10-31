@@ -149,6 +149,31 @@ for(let i=0;i<CHAPTERS.length;i++){
  chapter.checkpoint=[920,Math.round(width*.55),width-780];
 }
 
+// Seven original motifs. Each area has its own instrument palette, rhythm, harmony and register.
+const REALM_SCORES={
+ castle:{lead:'sawtooth',second:'triangle',bass:'sine',shift:.75,volume:.016,percussion:'tick',octave:1,
+  tempo:.275,melody:[330,392,466,0,349,392,523,0,466,440,349,330,311,0,294,0],bass:[165,0,233,0,175,0,261,0,196,0,174,0,165,0,147,0],
+  chords:[[165,196,233],[175,220,262],[147,185,220],[196,233,294]]},
+ snow:{lead:'sine',second:'triangle',bass:'sine',shift:1.2,volume:.025,percussion:'brush',octave:1,
+  tempo:.248,melody:[587,698,784,0,880,784,698,587,523,587,698,0,784,698,587,0],bass:[196,0,294,0,220,0,330,0,175,0,262,0,196,0,294,0],
+  chords:[[196,246,294],[220,262,330],[175,220,262],[196,246,311]]},
+ jungle:{lead:'triangle',second:'sine',bass:'sawtooth',shift:1,volume:.025,percussion:'wood',octave:1,
+  tempo:.175,melody:[392,0,494,523,587,392,0,494,659,587,523,0,392,494,523,0],bass:[196,0,247,196,0,233,0,196,220,0,262,220,0,233,196,0],
+  chords:[[196,233,294],[220,262,330],[233,294,349],[196,247,294]]},
+ race:{lead:'square',second:'sawtooth',bass:'triangle',shift:1,volume:.016,percussion:'toy',octave:1,
+  tempo:.14,melody:[523,659,784,988,784,659,523,0,698,880,1046,880,784,698,659,0],bass:[131,0,196,131,165,0,247,165,146,0,220,146,165,0,247,196],
+  chords:[[262,330,392],[294,370,440],[330,392,494],[262,349,440]]},
+ moon:{lead:'sine',second:'triangle',bass:'sine',shift:1.5,volume:.019,percussion:'tick',octave:1,
+  tempo:.325,melody:[440,0,523,0,659,0,587,0,784,0,698,0,587,523,440,0],bass:[110,0,0,165,0,0,147,0,130,0,0,196,0,0,165,0],
+  chords:[[110,165,220],[130,196,262],[147,220,294],[123,185,247]]},
+ sea:{lead:'sine',second:'sine',bass:'triangle',shift:.8,volume:.018,percussion:'brush',octave:1,
+  tempo:.34,melody:[349,0,392,0,523,466,392,0,330,0,440,0,523,392,349,0],bass:[175,0,0,262,0,233,0,196,165,0,0,220,0,196,0,175],
+  chords:[[175,220,262],[165,196,247],[196,246,294],[147,175,220]]},
+ mountain:{lead:'triangle',second:'sawtooth',bass:'sine',shift:1,volume:.023,percussion:'wood',octave:1,
+  tempo:.228,melody:[392,523,587,784,698,587,523,0,466,587,698,880,784,698,587,0],bass:[196,0,261,0,294,0,392,0,233,0,294,0,349,0,196,0],
+  chords:[[196,246,294],[233,294,349],[262,330,392],[175,220,262]]}
+};
+
 const actOf=i=>Math.floor(Math.max(0,i)/5);
 const isFinal=i=>i===CHAPTERS.length-1;
 // A new local campaign seed changes the mystery, atmosphere, encounters and cat personalities.
@@ -422,7 +447,7 @@ function musicTick(){
  if(audioMuted||!audioCtx||audioCtx.state!=='running')return;
  const desired=detectMusicScene();modeChange(desired);
  if(phase==='menu'||phase==='paused')return;
- const now=audioCtx.currentTime,act=actOf(save.level),style=MUSIC_SCENES[SCENE_IDS[act]||'clock'],base=LEVEL_MUSIC[act]||LEVEL_MUSIC[3];
+ const now=audioCtx.currentTime,act=actOf(save.level),biome=level?.realm?.id||realmOf(save.level).id,style=REALM_SCORES[biome]||MUSIC_SCENES.clock,base=style;
  if(musicAt<now-.9)musicAt=now+.04;
  let scheduled=0;
  while(musicAt<now+.13&&scheduled++<3){
@@ -445,7 +470,7 @@ function musicTick(){
   }
   if(b)scoreNote(b*(route?.75:1),musicAt,tempo*(route?2.15:1.4),style.bass,style.volume*(stressed?.84:.55)*levelGain,true);
   if(i%8===0 && !gag){
-   const progression=WORLD_HARMONIES[act]||WORLD_HARMONIES[3],triad=progression[Math.floor(musicStep/8)%progression.length];
+   const progression=style.chords||WORLD_HARMONIES[act]||WORLD_HARMONIES[3],triad=progression[Math.floor(musicStep/8)%progression.length];
    const padWave=act===1?'sine':act===2?'triangle':act===3?'sawtooth':'sine';
    for(let c=0;c<3;c++)scoreNote(triad[c]*(route?.75:1),musicAt+c*.022,tempo*7.3,padWave,style.volume*(act===3?.12:.17)*levelGain,true);
   }
@@ -2277,7 +2302,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   friendJoin:()=>{if(!level.visitor)return false;joinFriend(level.visitor);return true},
   setCoins:(n)=>{save.coins=Math.max(0,Math.min(999999,Math.floor(n)));persist();updateUI()},
   createSlot:name=>createNamedSlot(name),slots:()=>namedSlots().map(({name,level,coins})=>({name,level,coins})),loadSlot:name=>restoreNamedSlot(name),deleteSlot:name=>removeNamedSlot(name),
-  musicMode:()=>detectMusicScene(),musicState:()=>({mode:detectMusicScene(),active:activeScore,transitions:musicTransitions,world:SCENE_IDS[actOf(save.level)]}),
+  musicMode:()=>detectMusicScene(),musicState:()=>({mode:detectMusicScene(),active:activeScore,transitions:musicTransitions,world:SCENE_IDS[actOf(save.level)],biome:level?.realm?.id||realmOf(save.level).id}),
   previewCostume:(key,character)=>{if(!Object.hasOwn(COSTUMES,key))return null;if(character&&Object.hasOwn(HEROES,character))save.character=character;save.outfit=key;persist();return prizeName(key)},
   testReward:(number=4)=>{const prior=Math.random;Math.random=()=>Math.max(0,Math.min(.999,(number-.5)/6));try{awardDice({id:'test-reward-'+save.level+'-'+number,used:false})}finally{Math.random=prior}return {costume:save.outfit,coins:save.coins,life:save.lives}},
   mystery:()=>mystery().name,seed:()=>save.seed,
