@@ -668,7 +668,7 @@ function drawMount(m){
   ctx.fillStyle='#f5f0ff';ctx.font='17px sans-serif';ctx.fillText('✦',-9,-10);
  }
  ctx.restore();
- if(player.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
+ if(player?.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
 function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
