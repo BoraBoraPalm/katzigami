@@ -166,13 +166,24 @@ function campaignSeed(){try{const r=new Uint32Array(1);crypto.getRandomValues(r)
 const mystery=()=>MYSTERIES[(save.seed||1)%MYSTERIES.length];
 const campaignVar=(salt)=>seeded(save.seed||1,salt);
 const personality=(index)=>CAT_PERSONALITIES[Math.floor(campaignVar(index+101)*CAT_PERSONALITIES.length)];
-const defaultSave=()=>({version:1,campaignV3:true,campaignV4:true,character:'cat',difficulty:'medium',lives:5,coins:0,coinTaken:[],rolledHouses:[],costumes:[],perk:null,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0});
+const FRIEND_ROSTER={
+ Pip:{coat:'peach',icon:'📮',hint:'Auf dem Rücken von Nox’ Briefen steht ein zweites, verborgenes Siegel.',secret:'Pips Briefsiegel zeigt den versteckten Ausgang bei der zweiten Glocke.'},
+ Yuki:{coat:'lilac',icon:'🍃',hint:'Unter Moos versteckt sich eine alte Brücke, die nur von der anderen Seite sichtbar ist.',secret:'Yuki kennt die geheime alte Wurzelbrücke und führt zu zusätzlichen Münzen.'},
+ Miso:{coat:'ginger',icon:'🧭',hint:'Die Wachkatzen wechseln ihre Schicht immer nach dem dritten Uhrenschlag.',secret:'Miso hat die Patrouille ausspioniert: Die besten Münzen liegen unter der Wachplattform.'},
+ Tavi:{coat:'rose',icon:'🔧',hint:'Nox’ Uhrwerkräder haben eine blinde Stelle. Dort kommt man sicher vorbei.',secret:'Tavi hat den Zahnkranz markiert und eine verborgene Münzspur entdeckt.'},
+ Dahlia:{coat:'rose',icon:'👑',hint:'Ich hatte gute Gründe, die Blütenfarben zu verstecken, aber nicht das Recht, allen die Wahrheit zu verschweigen.',secret:'Dahlia verrät den Schlüssel zur versteckten Kronenkammer.'}
+};
+const FRIEND_SCHEDULE=['Pip','Yuki','Miso','Yuki','Pip','Miso','Yuki','Tavi','Pip','Miso','Dahlia','Yuki','Miso','Tavi','Yuki','Pip','Miso','Tavi','Yuki','Miso'];
+const INJURY_LEVELS={6:'Yuki',12:'Miso',17:'Tavi'};
+const HEAL_COST=150;
+function friendState(name){if(!save.friends)save.friends={};return save.friends[name]||(save.friends[name]={trust:0,healed:false,injured:false,meetings:0,secrets:0})}
+const defaultSave=()=>({version:1,campaignV3:true,campaignV4:true,character:'cat',difficulty:'medium',lives:5,coins:0,coinTaken:[],rolledHouses:[],costumes:[],perk:null,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0,friends:{},friendEncounters:[]});
 function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV4?raw.level:(raw.campaignV3?Math.floor(raw.level/3)*5+raw.level%3:raw.level*5))),campaignV3:true,campaignV4:true,
  character:Object.hasOwn(HEROES,raw.character)?raw.character:'cat',difficulty:Object.hasOwn(DIFFICULTY,raw.difficulty)?raw.difficulty:'medium',
  lives:Number.isInteger(raw.lives)?clamp(raw.lives,0,99):5,coins:Number.isInteger(raw.coins)?clamp(raw.coins,0,999999):0,
  coinTaken:Array.isArray(raw.coinTaken)?raw.coinTaken:[],rolledHouses:Array.isArray(raw.rolledHouses)?raw.rolledHouses:[],costumes:Array.isArray(raw.costumes)?raw.costumes.filter(x=>Object.hasOwn(COSTUMES,x)):[],perk:Object.hasOwn(SMALL_PERKS,raw.perk)?raw.perk:null,
- hearts:Math.max(1,Math.min(5,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
-let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,camY=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={},transport=null;
+ hearts:Math.max(1,Math.min(5,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0,friends:raw.friends&&typeof raw.friends==='object'?raw.friends:{},friendEncounters:Array.isArray(raw.friendEncounters)?raw.friendEncounters:[]}}catch{return defaultSave()}}
+let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,camY=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={},transport=null,companion=null;
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
@@ -185,6 +196,7 @@ function namedSlots(){
 function storeSlots(slots){try{localStorage.setItem(SLOT_KEY,JSON.stringify(slots));return true}catch{return false}}
 function snapshotForSlot(name){
  const copy=JSON.parse(JSON.stringify(save));
+ copy.manualCompanion=companion?{name:companion.name,remaining:companion.remaining,x:companion.x,y:companion.y}:null;
  copy.manualPosition=(player&&level&&phase!=='menu')?{level:save.level,x:clamp(player.x,0,level.width-65),y:player.y,route:player.route||null}:null;
  return {name:name.trim().slice(0,44),timestamp:Date.now(),level:save.level,hero:save.character,coins:save.coins,state:copy};
 }
@@ -210,6 +222,9 @@ function restoreNamedSlot(name){
    player.inv=3;player.grounded=false;player.vx=0;player.vy=0;
    cam=clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW));
    camY=player.route?clamp(player.y-330,-850,865):0;
+  }
+  if(slot.state.manualCompanion&&FRIEND_ROSTER[slot.state.manualCompanion.name]){
+   companion={...slot.state.manualCompanion,remaining:Math.max(0,Math.min(1500,slot.state.manualCompanion.remaining)),secretShown:false};
   }
   persist();return true
  }catch{return false}
@@ -492,7 +507,7 @@ function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABE
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Wähle Katze, Hund, Huhn, Hase oder Fuchs sowie Leicht, Mittel, Schwer oder Ultra. Durchquere 20 lange Retro-Anime-Level mit Wolkenpfaden, Maulwurfsgängen und Tropfsteinhöhlen. Schwingende Schläuche saugen dich in alternative Routen. Mit einem präzisen Sprung von oben kannst du selten einen Vogel oder eine Wand- und Deckenschnecke reiten; mit derselben Sprungtaste springst du ab. Sammle Bronze-, Silber- und Goldmünzen und würfle in Häusern für Kostüme, Leben oder kleine Fähigkeiten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über dem Kopf deiner Spielfigur. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){musicScene='explore';const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){musicScene='explore';const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;companion=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const routes=[
  {id:'cloud',label:'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
@@ -553,8 +568,10 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
    enemy.hp=Math.max(2,Math.ceil(enemy.hp*1.1));enemy.maxHp=enemy.hp;enemies.push(enemy);
   }
  }
+ const guestName=FRIEND_SCHEDULE[i]||'Pip',friendId='friend-'+i+'-'+guestName;
+ const visitor={id:friendId,name:guestName,x:Math.round(d.width*(i%3===0?.31:i%3===1?.40:.48)),y:390,status:save.friendEncounters.includes(friendId)?'departed':'waiting',injury:INJURY_LEVELS[i]===guestName};
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,visitor,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 // Bonus routes, collectible coins and a free once-per-house dice reward.
 function takeCoin(coin){
  if(coin.taken)return;coin.taken=true;const value=COIN_VALUES[coin.type]||1;
@@ -661,6 +678,89 @@ function drawAdventure(){
   ctx.fillStyle='#de91af';ctx.beginPath();ctx.moveTo(-56,-82);ctx.lineTo(0,-135);ctx.lineTo(56,-82);ctx.closePath();ctx.fill();
   round(-17,-36,34,36,12,'#a888c4');ctx.font='25px sans-serif';ctx.fillText(house.used?'🐭':'🎲',-14,-94);ctx.restore()}
  for(const trap of level.routeHazards){const x=trap.x-cam;if(x<-30||x>viewW+30)continue;ctx.fillStyle='#ded0ed';ctx.beginPath();ctx.moveTo(x-20,750);ctx.lineTo(x,840);ctx.lineTo(x+20,750);ctx.fill()}
+}
+
+function friendMeeting(){
+ if(phase!=='playing'||!level?.visitor||!player)return;
+ const v=level.visitor;
+ if(v.status!=='waiting'||Math.abs(player.x+player.w*.5-v.x)>47||player.route)return;
+ v.status='talking';
+ const state=friendState(v.name),wounded=v.injury&&!state.healed;
+ const intro=state.meetings>0?'»Da bist du ja wieder!« ':'»Endlich begegnen wir uns!« ';
+ state.meetings++;save.friendEncounters.push(v.id);persist();
+ if(wounded){
+  state.injured=true;persist();
+  const text=intro+v.name+' liegt verletzt am Weg. Nox’ Wachkatzen haben die Pfote getroffen. Für '+HEAL_COST+' Münzen könnte ein Heilkraut helfen. Du hast '+save.coins+' Münzen. Wenn du nicht hilfst, bleibt der Freund zurück und verliert Vertrauen.';
+  dialog({tag:'💔 VERLETZTER FREUND',title:v.name+' braucht dich!',portrait:'🐈‍⬛ 🩹 💔',body:text,
+   options:[{label:'💗 Für '+HEAL_COST+' Münzen heilen',action:()=>healFriend(v)},
+    {label:'🔎 Nur nach einem Hinweis fragen',action:()=>{state.trust--;persist();v.status='departed';toast(FRIEND_ROSTER[v.name].hint);resume()}},
+    {label:'🐾 Weitergehen – Münzen behalten',action:()=>{state.trust-=2;persist();v.status='departed';resume();toast(v.name+' schaut dir traurig hinterher.')}}]});
+ }else{
+  const lore=FRIEND_ROSTER[v.name];
+  dialog({tag:'🐾 WIEDERSEHEN · '+v.name.toUpperCase(),title:v.name+' ist zurück!',portrait:'🐱 '+lore.icon+' 🌸',
+   body:intro+v.name+': »'+lore.hint+'« Begleite ich dich ein Stück? Vielleicht entdecken wir zusammen eine geheime Münzspur.',
+   options:[{label:'🤝 Ein Stück gemeinsam reisen',action:()=>joinFriend(v)},
+    {label:'🗝 Nur ein Geheimnis erfahren',action:()=>{state.secrets++;state.trust++;v.status='departed';persist();resume();toast(lore.secret)}},
+    {label:'🐾 Allein weitergehen',action:()=>{v.status='departed';resume()}}]});
+ }
+}
+function healFriend(v){
+ const f=friendState(v.name);
+ if(save.coins<HEAL_COST){
+  v.status='waiting';toast('🪙 Es fehlen '+(HEAL_COST-save.coins)+' Münzen!');
+  resume();return false;
+ }
+ save.coins-=HEAL_COST;f.healed=true;f.injured=false;f.trust+=3;persist();updateUI();
+ burst(v.x,390,'#b6edc7',32);sound('transform');
+ dialog({tag:'💗 GEHEILTE PFOTE',title:v.name+' ist wieder gesund!',portrait:'🌿 💖 🐈',body:'»Danke! Das Heilkraut wirkt. Ich zeige dir als Dank einen geheimen Weg und begleite dich ein Stück.« Die 150 Münzen sind ausgegeben, aber '+v.name+' vertraut dir nun mehr.',
+  options:[{label:'🐾 Zusammen weiter!',action:()=>joinFriend(v)}]});return true;
+}
+function joinFriend(v){
+ const state=friendState(v.name);state.trust++;persist();
+ v.status='following';
+ companion={name:v.name,x:v.x,y:390,remaining:850+Math.floor(campaignVar(save.level+35)*440),secretShown:false};
+ resume();toast('🤝 '+v.name+' begleitet dich jetzt!');sound('choice');
+}
+function tickCompanion(dt){
+ if(phase!=='playing'||!level||!player)return;
+ if(level.visitor?.status==='waiting')friendMeeting();
+ if(!companion)return;
+ if(!Number.isFinite(companion.x))companion.x=player.x-60;
+ const targetX=player.x-player.facing*72;
+ companion.x+=(targetX-companion.x)*Math.min(1,dt*4);
+ companion.y+=(player.y+17-companion.y)*Math.min(1,dt*3);
+ companion.remaining-=Math.abs(player.vx)*dt;
+ if(!companion.secretShown&&companion.remaining<550){
+  companion.secretShown=true;const f=friendState(companion.name);f.secrets++;persist();
+  toast('🗝 '+FRIEND_ROSTER[companion.name].secret);
+  // Reward discovery, without placing coins in mandatory dangerous routes.
+  for(let i=0;i<4;i++){
+   const id='friend-secret-'+save.level+'-'+companion.name+'-'+i;
+   if(!level.coins.some(c=>c.id===id)&&!save.coinTaken.includes(id))
+    level.coins.push({id,x:clamp(player.x+135+i*48,120,level.width-210),y:340-i%2*40,type:i===3?'gold':'silver',taken:false});
+  }
+ }
+ if(companion.remaining<=0||player.x>=level.width-450){
+  const name=companion.name;companion=null;if(level.visitor)level.visitor.status='departed';
+  toast('👋 '+name+' nimmt den Wurzelpfad und verschwindet. Bis bald!');
+ }
+}
+function drawCompanion(){
+ if(!level)return;
+ const v=level.visitor;
+ if(v&&v.status==='waiting'&&v.x>cam-90&&v.x<cam+viewW+90){
+  ctx.save();ctx.globalAlpha=.95;drawCat(v.x-cam,406,.8,FRIEND_ROSTER[v.name].coat,Math.sin(clock*2)*3,1);
+  if(v.injury&&!friendState(v.name).healed){ctx.font='bold 24px sans-serif';ctx.fillText('🩹',v.x-cam-13,375)}
+  round(v.x-cam-44,315,88,25,10,'#fff9e9','#e8b4c7',2);ctx.textAlign='center';ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle='#7b557a';ctx.fillText(v.name+' ♥',v.x-cam,333);ctx.restore();
+ }
+ if(companion){
+  const x=companion.x-cam,y=companion.y;
+  if(x>-110&&x<viewW+110){
+   ctx.save();drawCat(x,y,.76,FRIEND_ROSTER[companion.name].coat,Math.sin(clock*10)*3,player.facing);
+   ctx.textAlign='center';ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle='#fff8e8';
+   ctx.fillText(companion.name+' • '+Math.ceil(Math.max(0,companion.remaining)/100)+' ✿',x,y-72);ctx.restore();
+  }
+ }
 }
 function startDialog(i){
  if(i===0){
@@ -905,7 +1005,7 @@ function drawMount(m){
  if(player?.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
-function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();
+function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();tickCompanion(dt);if(phase!=='playing')return;
  for(const mount of level.mounts){if(mount.testFreeze>0)mount.testFreeze=Math.max(0,mount.testFreeze-dt);else mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
  if(updateRiding(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
@@ -1478,7 +1578,7 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
  for(let j=0;j<level.width/100;j++){const x=j*101+22;if(x<cam-20||x>cam+viewW+25)continue;const grounded=level.ground.some(p=>x>=p.x+9&&x<p.x+p.w-9);if(grounded){flower(x-cam,441,.56+rand(j*5+1)*.5,j);if(j%4===0)flower(x-cam+25,448,.37,j*2)}}
  for(const p of level.checkpoints){const x=p-cam;if(x<-30||x>viewW+30)continue;line(x,450,x,373,'#a5819d',5);ctx.font='29px sans-serif';ctx.fillText(save.checkpoint>=p?'💗':'🌼',x-16,375)}
  for(const item of level.items)drawMushroom(item);drawPowerMushroom(level.powerItem);for(const charm of level.charms)drawCharm(charm);for(const coin of level.coins)drawCoin(coin);drawHouses();for(const tube of level.tubes)drawTube(tube);
- level.npcs.forEach(drawNPC);
+ level.npcs.forEach(drawNPC);drawCompanion();
  for(const e of level.enemies)drawEnemy(e);
  for(const m of level.mounts)drawMount(m);
  drawGate();
@@ -1507,6 +1607,12 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
  stage.addEventListener('contextmenu',e=>e.preventDefault());resize();updateUI();menu();requestAnimationFrame(frame);
  // A narrow, opt-in interface for automated browser regression tests; not active in normal play.
  if(new URLSearchParams(location.search).has('test'))window.__katzigamiTest={
+  friendDebug:()=>({visitor:level.visitor,companion:companion&&{...companion},friends:save.friends,meetings:save.friendEncounters.slice()}),
+  friendMeet:()=>{if(!level.visitor)return false;player.x=level.visitor.x-20;friendMeeting();return true},
+  friendHeal:()=>{if(!level.visitor)return false;return healFriend(level.visitor)},
+  friendJoin:()=>{if(!level.visitor)return false;joinFriend(level.visitor);return true},
+  setCoins:(n)=>{save.coins=Math.max(0,Math.min(999999,Math.floor(n)));persist();updateUI()},
+  createSlot:name=>createNamedSlot(name),slots:()=>namedSlots().map(({name,level,coins})=>({name,level,coins})),loadSlot:name=>restoreNamedSlot(name),deleteSlot:name=>removeNamedSlot(name),
   musicMode:()=>detectMusicScene(),musicState:()=>({mode:detectMusicScene(),active:activeScore,transitions:musicTransitions,world:SCENE_IDS[actOf(save.level)]}),
   previewCostume:(key,character)=>{if(!Object.hasOwn(COSTUMES,key))return null;if(character&&Object.hasOwn(HEROES,character))save.character=character;save.outfit=key;persist();return prizeName(key)},
   testReward:(number=4)=>{const prior=Math.random;Math.random=()=>Math.max(0,Math.min(.999,(number-.5)/6));try{awardDice({id:'test-reward-'+save.level+'-'+number,used:false})}finally{Math.random=prior}return {costume:save.outfit,coins:save.coins,life:save.lives}},
