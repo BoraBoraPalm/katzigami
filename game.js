@@ -121,7 +121,7 @@ function dialog({tag='KATZEN-GESPRÄCH',title,portrait='🐱 ✨ 🐱',body,opti
 // Offline companion logic is rule-based (no cloud AI, no API key or invented LLM claims).
 // Free text is interpreted into intent, affinity and world changes on every campaign.
 function interpretAnswer(input){
- const t=String(input).toLocaleLowerCase('de').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');
+ const t=String(input).toLocaleLowerCase('de').normalize('NFD').replace(/\p{M}/gu,'');
  const words=(pattern)=>pattern.test(t);
  if(words(/(hilfe|helfe|rett|freund|lieb|zusammen|danke|vertrau|fried|vergeb|sorry|tut mir leid|schutzen|schuetzen|gemeinsam)/))return 'kind';
  if(words(/(kampf|angreif|besieg|hass|bose|boese|hau|schlag|zorn|stark|gefahr|droh)/))return 'brave';
