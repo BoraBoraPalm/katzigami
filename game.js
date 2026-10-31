@@ -33,6 +33,14 @@ const ENEMY_TYPES={
  archer:{name:'Bogenmieze',hp:5,range:65,speed:1.1,scale:.76,color:'#ffc287',score:5},
  guardian:{name:'Wächterkater',hp:10,range:44,speed:.7,scale:1.02,color:'#b6caaa',score:7}
 };
+const ROUTE_ENEMIES={
+ bird:{name:'Wolkenkrähe',hp:3,color:'#83c7e7',speed:1.6,scale:.7,range:82,score:4},
+ worm:{name:'Riesenregenwurm',hp:7,color:'#d7939e',speed:.75,scale:1.05,range:47,score:6},
+ bat:{name:'Tropfenfledermaus',hp:4,color:'#8d82b6',speed:2.1,scale:.78,range:86,score:5},
+ mole:{name:'Maulwurf-Wächter',hp:5,color:'#ab9379',speed:1.2,scale:.87,range:70,score:5}
+};
+Object.assign(ENEMY_TYPES,ROUTE_ENEMIES);
+const COIN_VALUES={bronze:1,silver:5,gold:20};
 const CHARMS={
  speed:{name:'Turbo-Fisch',icon:'🐟',color:'#ffe46c',seconds:9,bad:false,info:'Rennboost!'},
  invincible:{name:'Sternen-Schutz',icon:'⭐',color:'#ffdd82',seconds:6,bad:false,info:'Kurz unverwundbar!'},
@@ -124,7 +132,7 @@ function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'nu
  lives:Number.isInteger(raw.lives)?clamp(raw.lives,0,99):5,coins:Number.isInteger(raw.coins)?clamp(raw.coins,0,999999):0,
  coinTaken:Array.isArray(raw.coinTaken)?raw.coinTaken:[],rolledHouses:Array.isArray(raw.rolledHouses)?raw.rolledHouses:[],costumes:Array.isArray(raw.costumes)?raw.costumes.filter(x=>Object.hasOwn(COSTUMES,x)):[],perk:Object.hasOwn(SMALL_PERKS,raw.perk)?raw.perk:null,
  hearts:Math.max(1,Math.min(5,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
-let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,camY=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={};
+let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,camY=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={},transport=null;
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
@@ -259,8 +267,32 @@ function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABE
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Durchquere zwölf lange Level in vier Retro-Anime-Welten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über Momos Kopf. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
+ const routes=[
+ {id:'cloud',label:'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
+ {id:'depth',label:i%2?'Tropfsteinhöhle':'Maulwurfstollen',from:1370,end:Math.min(d.width-350,2750),y:890,kind:i%2?'cave':'burrow',bonus:360}
+ ];
+ const tubes=routes.flatMap(q=>[
+  {id:q.id+'-in',x:q.from,y:378,route:q.id,direction:'in'},
+  {id:q.id+'-out',x:q.end,y:q.kind==='cloud'?-540:966,route:q.id,direction:'out'}
+ ]);
+ const routePlatforms=[];
+ for(const route of routes){
+  if(route.kind==='cloud'){
+   for(let x=route.from+125,j=0;x<route.end+70;x+=175,j++)routePlatforms.push({x,y:-462+(j%3===1?-54:0),w:158,h:25,ground:false,moving:true,baseY:-462+(j%3===1?-54:0),baseX:x,phase:j*1.9});
+  }else{
+   routePlatforms.push({x:route.from+100,y:1035,w:route.end-route.from+150,h:90,ground:true,route:route.kind});
+   for(let x=route.from+300,j=0;x<route.end;x+=260,j++)routePlatforms.push({x,y:916-j%2*45,w:135,h:25,ground:false,route:route.kind});
+  }
+ }
+ const newCoins=[];
+ const addCoin=(x,y,type,id)=>newCoins.push({id:'coin-'+i+'-'+id,x,y,type,taken:save.coinTaken.includes('coin-'+i+'-'+id)});
+ for(let x=260,j=0;x<d.width-140;x+=185,j++)addCoin(x,j%3===0?346:400,j%8===0?'gold':j%3===0?'silver':'bronze','main-'+j);
+ for(const route of routes){for(let x=route.from+175,j=0;x<route.end;x+=156,j++)addCoin(x,route.kind==='cloud'?-535:967,j%5===0?'gold':'silver',route.id+'-'+j)}
+ const houses=[{id:'house-'+i+'-a',x:650,y:450},{id:'house-'+i+'-b',x:d.width-420,y:450}].map(h=>({...h,used:save.rolledHouses.includes(h.id),cooldown:0}));
+ const routeHazards=routes.filter(q=>q.kind==='cave').flatMap(q=>Array.from({length:6},(_,j)=>({x:q.from+230+j*180,y:830,type:'stalactite'})));
+
  const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type],hp=Math.max(1,Math.ceil(t.hp*diff().enemyHp));return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp,maxHp:hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
  for(let x=d.width-680;x>d.width-2100&&x>650;x-=420){if(!d.gaps.some(([a,b])=>x>a-65&&x<b+55))positions.push(x)}
  let enemies=positions.map((x,j)=>makeEnemy(x,j,j===0?'scout':ENEMY_MAP[act][(j+Math.floor(campaignVar(i*100+j)*ENEMY_MAP[act].length))%ENEMY_MAP[act].length]));
@@ -281,8 +313,18 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
   const kind=keys[(j+Math.floor(campaignVar(i*503+j)*keys.length))%keys.length];
   charms.push({id:'charm'+i+'-'+j,kind,x,y:400,taken:false});
  }
+ // High and low route fauna; each route has distinct challenges and rewards.
+ for(const route of routes){
+  const types=route.kind==='cloud'?['bird','bird','bat']:route.kind==='cave'?['bat','worm','bat']:['worm','mole','worm'];
+  for(let j=0;j<5;j++){
+   const x=route.from+280+j*(route.end-route.from-320)/5;
+   const enemy=makeEnemy(x,100+j+i*11,types[j%types.length]);
+   enemy.baseY=route.kind==='cloud'?-518:945;enemy.y=enemy.baseY;enemy.route=route.id;
+   enemy.hp=Math.max(2,Math.ceil(enemy.hp*1.1));enemy.maxHp=enemy.hp;enemies.push(enemy);
+  }
+ }
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,routes,tubes,routePlatforms,routeHazards,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
  if(i%5!==0){resume();return}
  const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
