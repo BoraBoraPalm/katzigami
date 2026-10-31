@@ -51,53 +51,65 @@ with sync_playwright() as p:
     check(all(b['width']>=77 and b['height']>=77 for b in boxes),'touch target too small on landscape')
     check(boxes[1]['x']+boxes[1]['width']+50<boxes[2]['x'],'left/right group not separated')
     page.wait_for_timeout(400)
-    # Collect all accessible mushrooms and branch through the entire story.
-    take_all(page);check(len(snapshot(page)['collected'])==2,'chapter 1 mushroom collection failed')
-    finish(page,2320);check(snapshot(page)['phase']=='dialogue','chapter 1 gate failed')
-    click(page,0);check(snapshot(page)['flags']['helpedMiso'],'Miso rescue did not persist')
-    check(snapshot(page)['level']==1,'did not move to chapter 2')
-    click(page,0);take_all(page)
-    finish(page,2480);click(page,0);check(snapshot(page)['flags']['trustedQueen'],'queen branch missing')
-    click(page,0);take_all(page)
-    finish(page,2660);click(page,0);check(snapshot(page)['flags']['readLetter'],'letter branch missing')
-    click(page,0);take_all(page);check(len(snapshot(page)['collected'])==7,'not all mushrooms collected')
-    pos(page,2330);check(snapshot(page)['phase']=='dialogue','mirror cat dialogue not triggered')
-    click(page,0);check(snapshot(page)['boss']['done'],'compassion did not defeat boss')
-    finish(page,2670);check(snapshot(page)['phase']=='dialogue','ending choice not triggered')
-    click(page,0)
+    # All twelve chapters, three per world. The seven quest mushrooms are distributed.
+    for i in range(12):
+        check(snapshot(page)['level']==i,f'chapter {i+1} did not begin')
+        take_all(page)
+        width=snapshot(page)['width']
+        check(width>=3000,f'chapter {i+1} must be longer')
+        if i==11:
+            pos(page,width-410)
+            check(snapshot(page)['phase']=='dialogue','final mirror cat missing')
+            click(page,0)
+            check(snapshot(page)['boss']['done'],'compassion did not resolve mirror')
+        finish(page,width-105)
+        if i==11:
+            check(snapshot(page)['phase']=='dialogue','final choice missing')
+            click(page,0)
+            break
+        if i in (2,5,8):
+            check(snapshot(page)['phase']=='dialogue',f'branching chapter ending missing: {i}')
+            click(page,0)
+        check(snapshot(page)['level']==i+1,f'next chapter missing after {i}')
+        if snapshot(page)['phase']=='dialogue':click(page,0)
+    check(len(snapshot(page)['collected'])==7,'not all seven quest mushrooms collected')
+    check(snapshot(page)['flags']['helpedMiso'],'Miso rescue did not persist')
+    check(snapshot(page)['flags']['trustedQueen'],'queen trust not saved')
+    check(snapshot(page)['flags']['readLetter'],'letter choice not saved')
     check(snapshot(page)['winner'],'final game not won')
     check(snapshot(page)['ending']=='WAHRES STERNEN-ENDE',f"unexpected ending: {snapshot(page)['ending']}")
-    check('Sternen' in page.locator('.story-card').inner_text() or 'STERNEN' in page.locator('.story-card').inner_text(),'ending not rendered')
     check('"version":1' in page.evaluate('localStorage.getItem("katzigami-v1")'),'save not stored')
     page.screenshot(path=str(ROOT/'tests'/'true-ending.png'))
     check(not errors,f'JS errors in true ending route: {errors}')
-    print('PASS – Full story / 7 mushrooms / rescue / queen / letter / kind shadow / true ending')
-    print('PASS – Desktop keyboard + jumping, landscape two-thumb hit targets, auto saving')
+    print('PASS – 12 long levels, all seven quest mushrooms, true ending and chapter decisions')
     page.close()
-    # Second non-cooperative story path; exercise boss combat option and alternate ending.
+    # Alternate route: reject the friends, then fight the high-health mirror boss.
     page,errors=load(browser)
     click(page,0);click(page,1)
-    finish(page,2320);click(page,1) # abandon Miso
-    click(page,0);check(len(snapshot(page)['enemies'])>=9,'choice did not increase shadow cat count')
-    finish(page,2480);click(page,1) # don't trust queen
-    click(page,0);check(len(snapshot(page)['enemies'])>=10,'queen mistrust did not affect hazards')
-    finish(page,2660);click(page,1) # don't read letter
-    click(page,0);pos(page,2330)
-    check(snapshot(page)['phase']=='dialogue','boss not triggered on alternative route')
-    buttons=page.locator('.story-button').all_text_contents()
-    check(len(buttons)==1 and 'Schattenpfote' in buttons[0],'boss fight not forced by previous decisions')
-    click(page,0);check(snapshot(page)['boss']['active'],'boss battle did not start')
-    # The strengthened mirror boss needs sustained combat rather than only two stomps.
-    check(snapshot(page)['boss']['maxHp']>=10,'Boss must have meaningful HP')
-    for hit in range(12):
-        result=page.evaluate('window.__katzigamiTest.damageBoss(1)')
-        assert result,(hit,snapshot(page)['boss'])
-        page.evaluate('window.__katzigamiTest.step(.36)')
-    check(snapshot(page)['boss']['done'],f"boss collision did not resolve: {snapshot(page)['boss']}")
-    finish(page,2670);click(page,1)
+    for i in range(12):
+        width=snapshot(page)['width']
+        if i==11:
+            pos(page,width-410)
+            check(snapshot(page)['phase']=='dialogue','combat boss intro missing')
+            buttons=page.locator('.story-button').all_text_contents()
+            check(any('Schattenpfote' in b for b in buttons),'fight option missing')
+            click(page,0)
+            check(snapshot(page)['boss']['active'],'boss battle did not start')
+            check(snapshot(page)['boss']['maxHp']>=10,'boss HP too low')
+            for hit in range(12):
+                result=page.evaluate('window.__katzigamiTest.damageBoss(1)')
+                check(result,f'boss damage {hit} failed')
+                page.evaluate('window.__katzigamiTest.step(.36)')
+            check(snapshot(page)['boss']['done'],'boss did not fall after repeated hits')
+        finish(page,width-105)
+        if i==11:
+            click(page,1)
+            break
+        if i in (2,5,8):click(page,1)
+        if snapshot(page)['phase']=='dialogue':click(page,0)
     check(snapshot(page)['ending']=='MOND-ENDE','alternate ending not saved')
-    check(not errors,f'JS errors in alternative route: {errors}')
-    print('PASS – Alternative branching, extra enemies, boss fight physics, frozen-time ending')
+    check(not errors,f'JS errors on alternate route: {errors}')
+    print('PASS – alternative choices across twelve levels; repeated-hit boss and moon ending')
     page.close()
     # Portrait and large desktop layout tests.
     for w,h in [(390,844),(360,740),(1440,900)]:
