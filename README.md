@@ -35,3 +35,17 @@ Im Repository: `Settings → Pages → Build and deployment → Deploy from a br
 ## Lizenz / Nutzung
 
 Das Projekt ist öffentlich zugänglich. Der Quellcode enthält ausschließlich eigens erstellte Spielelemente; eine gesonderte Open-Source-Lizenz wurde nicht erteilt. Vor Weiterverwendung außerhalb der GitHub-Pages-Demo bitte Lizenzbedingungen mit dem Repository-Inhaber klären.
+
+## Kampfsystem (v4)
+
+- Vier **dauerhafte, aufeinander aufbauende** Verwandlungen: I Blütenwurf (1 Schaden), II Kettenblitz (2 Schaden, zwei Gegner), III Mondexplosion (3 Schaden + Flächeneffekt), IV Sternensturm (drei zielsuchende Sterne mit je 3 Schaden). Niedrigere Pilze können ein Herz auffüllen, aber die Stufe nie zurücksetzen.
+- Fünf Gegnertypen, darunter Panzerkater (4 HP), springende Luchse (2 HP), magisch schießende Nebelhexenkatzen (3 HP) und Titanmiezen (8 HP). Gegner haben Schadensanzeige und kurze Trefferunverwundbarkeit.
+- Spiegel-Momo ist jetzt ein Boss mit 12 HP und Lebensanzeige. Treffer kosten ein Herz, nicht die dauerhaft erworbene Verwandlung.
+
+## Dynamische Kampagnen und freie Dialoge (v5)
+
+- Jeder neue Durchlauf erhält einen eigenen Kampagnen-Seed mit einer von fünf großen Mysterienvarianten, wechselnden Katzen-Persönlichkeiten, Gegnerzusammenstellungen und einem leicht veränderten Lichtstil. Derselbe Spielstand behält seine Variante.
+- Bei jeder Katzenbegegnung kann man zwischen vorbereiteten Antworten wählen **oder eigene Sätze eintippen**. Die Offline-Dialoglogik erkennt grob Freundlichkeit, Neugier, Kampfeslust, Humor, Misstrauen und eigene Ideen. Beziehungen und Antworten werden gespeichert. Verbündete bauen zusätzliche Brücken, Rivalen rufen zusätzliche Gegner.
+- Gegner haben lokale taktische KI (Regelsteuerung): Beobachten, Verfolgen, Ausweichen und zielende Angriffe. Keine Netzwerkverbindung und keine Sprachmodell-API nötig.
+- **Technische Klarstellung:** Die freien Antworten werden bisher mit einem lokalen Schlüsselwort-/Regelsystem interpretiert; sie sind **keine generativen Antworten eines KI-Sprachmodells**. Unbegrenzte frei erfundene Reaktionen würden einen sicheren Backend-Proxy und einen separaten KI-Dienst erfordern, dessen Zugangsdaten niemals in ein öffentliches GitHub-Pages-Repository gehören.
+- Die Welt wird absichtlich **nicht vollständig zufällig** erzeugt: die vier Kapitel und die wichtigen Pilze bleiben spielbar und erreichbar, wichtige Storyereignisse erhalten Varianten und zusätzliche Konsequenzen.
