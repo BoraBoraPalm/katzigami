@@ -15,7 +15,7 @@
 
 **🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen Leben, tiergerechte animierte Outfits oder kleine Kräfte gewinnen.
 
-**🎨 Vier eigene Grafikstile** · **🎵 Dynamische Originalmusik** für Kampf, Boss, Höhlen, Wolken, Vogel- und Schneckenritt, Magie, Flüche und Story.
+**🎨 Vier spielerisch verschiedene Welten** – federnde Blüten, Wurzelbrücken, Kristalleis und Uhrwerkfallen · **🎵 Dynamische Originalmusik** für Kampf, Boss, Höhlen, Wolken, Vogel- und Schneckenritt, Magie, Flüche und Story.
 
 ## ✨ Tierkräfte – unbedingt einsammeln!
 
@@ -45,7 +45,9 @@ Jeder besondere Verwandlungspilz macht deinen Helden stärker und verändert Aus
 
 **⌨️ PC:** A/D oder ←/→ · Leertaste zum Springen · X/J für Spezialattacken.
 
-**💾 Automatisches Speichern** von Figur, Münzen, Würfelgewinnen, Level und Entscheidungen – kein Konto erforderlich.
+**🤝 Wiederkehrende Freunde** begleiten dich ein Stück, enthüllen Geheimnisse, verschwinden und kehren später zurück. Verletzte Freunde kannst du für **150 Münzen** heilen – oder zurücklassen.
+
+**💾 Autosave + bis zu acht benannte Speicherplätze** mit frei wählbarem Titel, Laden und Löschen – lokal im Browser.
 
 **💬 Eigene Dialogantworten:** lokale, regelbasierte Reaktionen (keine generative Online-KI). Jeder neue Durchlauf variiert Geschichte und Gegner.
 
