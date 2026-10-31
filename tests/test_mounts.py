@@ -14,7 +14,7 @@ with sync_playwright() as p:
  page.on('pageerror',lambda x:errors.append(str(x)))
  page.set_content(html,wait_until='domcontentloaded')
  page.wait_for_timeout(100)
- print('START_DIAGNOSTIC', 'buttons=',page.locator('[data-option]').count(), 'pageerrors=',errors, 'gamehead=',page.locator('#overlay-content').inner_text()[:300], flush=True)
+ assert page.locator('[data-option]').count()>0, f'Game menu failed to initialize: {errors}'
  api='window.__katzigamiTest'
  def snap():return page.evaluate(api+'.snapshot()')
  def step(seconds):page.evaluate('(s)=>window.__katzigamiTest.step(s)',seconds)
