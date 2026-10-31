@@ -26,3 +26,15 @@
 .free-answer textarea:focus{outline:3px solid #ffc86a;border-color:#b879b7}
 .free-answer .free-send{min-height:46px;background:linear-gradient(135deg,#7aceb8,#63b1cf)}
 @media(max-height:420px){.free-answer{margin:6px auto 0;gap:3px}.free-answer textarea{min-height:40px;max-height:62px;padding:6px 8px;font-size:12px}.free-answer .free-send{min-height:35px;font-size:12px;padding:6px}}
+/* Soft retro hand-drawn anime arcade treatment. The original touch controls are untouched. */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+#stage{isolation:isolate;outline:3px solid #ffedff;outline-offset:-3px}
+#stage::after{content:"";pointer-events:none;position:absolute;inset:0;z-index:3;
+ background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,#4d2d6211 4px);
+ mix-blend-mode:multiply;opacity:.33}
+.brand{letter-spacing:1.4px;text-shadow:1px 1px #ffe1f3,2px 2px #f4c4da}
+.hud-pill{box-shadow:3px 3px 0 #a17d9d80;border:2px solid #fffaf5}
+.story-title{text-shadow:3px 3px #fff,5px 5px #e8b6d2}
+.story-tag,.level-pill{letter-spacing:1.1px}
+.story-card{border-radius:23px;border:5px solid #fff8e5;box-shadow:0 9px 0 #965979,0 15px 0 #593f6480,0 19px 28px #301d3e77}
+@media(prefers-reduced-motion:reduce){#stage::after{opacity:.08}}
