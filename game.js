@@ -706,7 +706,9 @@ function drawAdventure(){
 function friendMeeting(){
  if(phase!=='playing'||!level?.visitor||!player)return;
  const v=level.visitor;
- if(v.status!=='waiting'||Math.abs(player.x+player.w*.5-v.x)>47||player.route)return;
+ if(v.status!=='waiting'||player.route)return;
+ if(v.requireExit){if(Math.abs(player.x-v.x)>120)v.requireExit=false;return}
+ if(Math.abs(player.x+player.w*.5-v.x)>47)return;
  v.status='talking';
  const state=friendState(v.name),wounded=v.injury&&!state.healed;
  const intro=state.meetings>0?'»Da bist du ja wieder!« ':'»Endlich begegnen wir uns!« ';
@@ -730,7 +732,7 @@ function friendMeeting(){
 function healFriend(v){
  const f=friendState(v.name);
  if(save.coins<HEAL_COST){
-  v.status='waiting';toast('🪙 Es fehlen '+(HEAL_COST-save.coins)+' Münzen!');
+  v.status='waiting';v.requireExit=true;toast('🪙 Es fehlen '+(HEAL_COST-save.coins)+' Münzen! Geh Münzen sammeln und komm zurück.');
   resume();return false;
  }
  save.coins-=HEAL_COST;f.healed=true;f.injured=false;f.trust+=3;persist();updateUI();
