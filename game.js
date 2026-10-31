@@ -2233,7 +2233,7 @@ function drawHero(x,y,bob){
 function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/viewW,0,0,canvas.height/HEIGHT,0,0);
  if(effects.sway>0||effects.dizzy>0){ctx.translate(Math.sin(clock*12)*13,Math.cos(clock*8)*6);ctx.rotate(Math.sin(clock*5)*.009)}
  sky();realmBackground();drawParticles();ctx.save();ctx.translate(0,-camY);
- if(!['race','moon'].includes(level.realm.id))drawVerticalWorld();
+ if(['castle','snow','jungle','sea','mountain'].includes(level.realm.id))drawVerticalWorld();
  for(const p of [...level.ground,...level.platforms,...level.routePlatforms])drawGround(p);drawChallenges();drawRealmObjects();
  for(let j=0;j<0;j++){const x=j*101+22;if(x<cam-20||x>cam+viewW+25)continue;const grounded=level.ground.some(p=>x>=p.x+9&&x<p.x+p.w-9);if(grounded){flower(x-cam,441,.56+rand(j*5+1)*.5,j);if(j%4===0)flower(x-cam+25,448,.37,j*2)}}
  for(const p of level.checkpoints){const x=p-cam;if(x<-30||x>viewW+30)continue;line(x,450,x,373,'#a5819d',5);ctx.font='29px sans-serif';ctx.fillText(save.checkpoint>=p?'💗':'🌼',x-16,375)}
@@ -2267,6 +2267,8 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
  stage.addEventListener('contextmenu',e=>e.preventDefault());resize();updateUI();menu();requestAnimationFrame(frame);
  // A narrow, opt-in interface for automated browser regression tests; not active in normal play.
  if(new URLSearchParams(location.search).has('test'))window.__katzigamiTest={
+  realmState:()=>({id:level.realm.id,events:level.realm.events.map(({kind,x,y,state,integrity,broken,hit,active})=>({kind,x,y,state,integrity,broken,hit,active})),cold:level.realm.cold,oxygen:level.realm.oxygen,raceX:level.realm.raceX,raceClock:level.realm.raceClock,subX:level.realm.subX,vinning:!!level.realm.vine}),
+  realmSetVine:()=>{const o=level.realm.events.find(o=>o.kind==='vine');if(!o)return false;player.x=o.x-20;player.y=280;player.vx=0;player.vy=-1;player.grounded=false;vxInput.jump=true;processVine(1/60);return !!level.realm.vine},
   challengeDebug:()=>level.challenges.map(({id,type,x,active,remaining,open,crumbles})=>({id,type,x,active,remaining,open,crumbles})),
   challengeTouch:(type)=>{const o=level.challenges.find(c=>c.type===type);if(!o)return false;player.x=o.x-20;player.y=390;player.grounded=true;vxInput.jump=true;tickChallenges(1/60);vxInput.jump=false;return o.active||player.vy<0||o.open||o.cooldown>0},
   friendDebug:()=>({visitor:level.visitor,companion:companion&&{...companion},friends:save.friends,meetings:save.friendEncounters.slice()}),
