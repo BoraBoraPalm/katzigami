@@ -11,11 +11,11 @@
 
 **🎚️ Leicht · Mittel · Schwer · Ultra** – mit begrenzten Leben und echtem Game Over.
 
-**🌀 Schwingende Saugschläuche** führen in schwebende Wolken, Maulwurfstollen und Tropfsteinhöhlen. **🐦 Mit etwas Geschick Vogelreiten (6 s)** oder **🐌 auf einer Wand- und Deckenschnecke mitfahren (8 s)**. Abspringen mit derselben Sprungtaste!
+**🌀 Schwingende Saugschläuche** führen in geheime Kerker, Unterwasserhöhlen, Wolkenwege und andere Abkürzungen. **🐦 Mit etwas Geschick Vogelreiten (6 s)** oder **🐌 auf einer Wand- und Deckenschnecke mitfahren (8 s)**. Abspringen mit derselben Sprungtaste!
 
 **🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen Leben, tiergerechte animierte Outfits oder kleine Kräfte gewinnen.
 
-**🎨 Vier spielerisch verschiedene Welten** – federnde Blüten, Wurzelbrücken, Kristalleis und Uhrwerkfallen · **🎵 Dynamische Originalmusik** für Kampf, Boss, Höhlen, Wolken, Vogel- und Schneckenritt, Magie, Flüche und Story.
+**🎨 Sieben eigene Spiel- und Grafikstile** · **🎵 Sieben adaptive Original-Soundtracks**, die sich zusätzlich bei Kämpfen, Bossen, Reittieren, Geheimwegen und Flüchen verändern.
 
 ## 🌈 Sieben Welten – sieben Spielweisen
 
