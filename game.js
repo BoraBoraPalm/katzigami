@@ -280,6 +280,8 @@ function toast(text){$('toast').textContent=text;$('toast').classList.add('show'
 function clearInputs(){vxInput.left=vxInput.right=vxInput.jump=false;queuedJump=0;['left','right','jump','special'].forEach(id=>$(id).classList.remove('pressed'))}
 function showOverlay(html){overlayContent.innerHTML=html;overlay.classList.add('visible');clearInputs()}
 function hideOverlay(){overlay.classList.remove('visible');overlayContent.replaceChildren()}
+function resume(){musicScene='explore';hideOverlay();phase='playing';clearInputs();lastFrame=performance.now();musicAt=0}
+function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard('PAUSE · KATZIGAMI','Eine kleine Verschnaufpause',hero().icon+' ☕ 🍪','Die Welt wartet, solange du verschnaufst. Auch zeitbegrenzte Kräfte und Flüche pausieren.',[{label:'🐾 Weiterspielen',action:resume},{label:'🏠 Hauptmenü',secondary:true,action:menu}])}else if(phase==='paused')resume()}
 function escapeText(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function card(tag,title,portrait,body,buttons){return `<article class="story-card"><div class="story-tag">${tag}</div><div class="story-portrait"><span>${portrait}</span></div><h1 class="story-title">${title}</h1><p class="story-copy">${body}</p><div class="choice-grid">${buttons.map((b,i)=>`<button class="story-button ${b.secondary?'secondary':''}" data-option="${i}" type="button">${b.label}</button>`).join('')}</div></article>`}
 function presentCard(tag,title,portrait,body,options){showOverlay(card(tag,title,portrait,body,options));overlayContent.querySelectorAll('[data-option]').forEach((el,i)=>el.addEventListener('click',()=>{sound('choice');hideOverlay();options[i].action()},{once:true}))}
