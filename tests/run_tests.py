@@ -43,6 +43,9 @@ with sync_playwright() as p:
     page.keyboard.down('ArrowRight');page.wait_for_timeout(450);page.keyboard.up('ArrowRight')
     x=snapshot(page)['player']['x']
     check(x>oldx+40,f'keyboard movement failed: {oldx}->{x}')
+    # Explicitly land before jump: test keyboard jumping, not bootstrap falling time.
+    page.evaluate('(x)=>window.__katzigamiTest.position(x,390)',x)
+    page.evaluate('window.__katzigamiTest.step(.06)')
     page.keyboard.down('Space');page.wait_for_timeout(80)
     up=snapshot(page)['player']['vy'];page.keyboard.up('Space')
     check(up<0,f'jump failed: vy={up}')
