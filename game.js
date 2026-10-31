@@ -124,7 +124,7 @@ function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'nu
  lives:Number.isInteger(raw.lives)?clamp(raw.lives,0,99):5,coins:Number.isInteger(raw.coins)?clamp(raw.coins,0,999999):0,
  coinTaken:Array.isArray(raw.coinTaken)?raw.coinTaken:[],rolledHouses:Array.isArray(raw.rolledHouses)?raw.rolledHouses:[],costumes:Array.isArray(raw.costumes)?raw.costumes.filter(x=>Object.hasOwn(COSTUMES,x)):[],perk:Object.hasOwn(SMALL_PERKS,raw.perk)?raw.perk:null,
  hearts:Math.max(1,Math.min(5,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
-let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={};
+let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,camY=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={};
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
@@ -252,14 +252,14 @@ function difficultySelect(character){
  action:()=>{save=defaultSave();save.character=character;save.difficulty=id;save.lives=d.lives;save.hearts=d.hearts;persist();enterLevel(0,true)}})));
 }
 function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABENTEUER','KATZIGAMI ✿','🐱 🍄 🌸','Momo sucht sieben Pilze und ein neues Geheimnis bei jedem Durchlauf. Du kannst andere Katzen mit selbst geschriebenen Antworten überzeugen – und jede Patrouille reagiert anders. Welche Wendung wartet wohl heute?',[
- ...(hasSavedGame()? [{label:save.won?'🌸 Noch einmal das Finale / weiterspielen':'🐾 Spielstand fortsetzen',action:()=>enterLevel(save.level,true)}]:[]),
+ ...(hasSavedGame()&&save.lives>0? [{label:save.won?'🌸 Noch einmal das Finale / weiterspielen':'🐾 Spielstand fortsetzen',action:()=>enterLevel(save.level,true)}]:[]),
  {label:'✿ Neues Abenteuer beginnen',action:characterSelect},
  {label:'🎮 So spielt man',secondary:true,action:help}
  ]);
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Durchquere zwölf lange Level in vier Retro-Anime-Welten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über Momos Kopf. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type],hp=Math.max(1,Math.ceil(t.hp*diff().enemyHp));return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp,maxHp:hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
  for(let x=d.width-680;x>d.width-2100&&x>650;x-=420){if(!d.gaps.some(([a,b])=>x>a-65&&x<b+55))positions.push(x)}
@@ -284,7 +284,7 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
  return {...d,index:i,toneVariant,ground,platforms,enemies,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
- if(i%3!==0){resume();return}
+ if(i%5!==0){resume();return}
  const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
 function resume(){hideOverlay();phase='playing';enterDynamicEncounters();clearInputs();lastFrame=performance.now();musicAt=0}
 function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard('PAUSE · EINE KATZE MUSS MAL SITZEN','Miau-Pause','🐱 ☕ 🌸',`Kapitel ${save.level+1}: ${CHAPTERS[save.level].name}. Gesammelte Pilze: ${save.collected.length}/${TOTAL}. Dein Fortschritt ist gespeichert.`,[
@@ -294,16 +294,16 @@ function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard(
  ])}else if(phase==='paused')resume()}
 function checkEndOfLevel(){if(phase!=='playing')return;if(isFinal(save.level)){if(!boss.done){toast('Ein magischer Spiegel versperrt den Ausgang!');player.x=Math.min(player.x,level.width-230);return}endChoice();return}
  const i=save.level;
- if(i%3!==2){nextChapter('Neue Strecke, neue Abenteuer! 🐱');return}
- if(i===2){dialog({tag:'PLOT TWIST · KAPITEL 1',title:'Miso in der Seifenblase',portrait:'🐈 🫧 🐱',body:'Kätzchen Miso hängt in einer riesigen Seifenblase. Gleichzeitig flattert eine Karte mit geheimen Abkürzungen davon. Pip ruft: »Rette die Karte! Katzen haben neun Leben!«',options:[
+ if(i%5!==4){nextChapter('Neue Strecke, neue Abenteuer! 🐱');return}
+ if(i===4){dialog({tag:'PLOT TWIST · KAPITEL 1',title:'Miso in der Seifenblase',portrait:'🐈 🫧 🐱',body:'Kätzchen Miso hängt in einer riesigen Seifenblase. Gleichzeitig flattert eine Karte mit geheimen Abkürzungen davon. Pip ruft: »Rette die Karte! Katzen haben neun Leben!«',options:[
  {label:'💗 Miso retten – Freunde sind wichtiger!',action:()=>{save.flags.helpedMiso=true;nextChapter('Miso: »Ich schulde dir ein Leben. Und eine Pizza.«')}},
  {label:'🗺️ Karte jagen – die Mission geht vor!',action:()=>{save.flags.helpedMiso=false;nextChapter('Miso: »Ich merke mir das. Sehr detailliert.«')}}
  ]})}
- if(i===5){dialog({tag:'PLOT TWIST · KAPITEL 2',title:'Die Königin hat ein Geheimnis',portrait:'👑 🐈 🐾',body:'Königin Dahlia sagt, sie habe alle Farben in einer Sanduhr versteckt, um den Wald vor dem ewigen Stillstand zu retten. Pip ruft: »Das sagen ALLE verdächtigen Katzen!«',options:[
+ if(i===9){dialog({tag:'PLOT TWIST · KAPITEL 2',title:'Die Königin hat ein Geheimnis',portrait:'👑 🐈 🐾',body:'Königin Dahlia sagt, sie habe alle Farben in einer Sanduhr versteckt, um den Wald vor dem ewigen Stillstand zu retten. Pip ruft: »Das sagen ALLE verdächtigen Katzen!«',options:[
  {label:'🌷 Dahlia glauben – ihre Geschichte anhören',action:()=>{save.flags.trustedQueen=true;nextChapter('Dahlia: »Endlich jemand mit Ohren UND Gehirn.«')}},
  {label:'🦉 Pip glauben – die Königin ist schuld!',action:()=>{save.flags.trustedQueen=false;nextChapter('Pip: »Ich war nie eine Eule! Ich bin ein KATER!«')}}
  ]})}
- if(i===8){dialog({tag:'DIE GROSSE WENDUNG · KAPITEL 3',title:'Die Katze von morgen',portrait:'🐱 ⏳ 🐱',body:'In der Uhr liegt ein Brief von MOMO … aus der Zukunft! '+mystery().cause+' Doch das Spiegelkätzchen hält immer noch die Zeit fest. Dahlia hat die Farben versteckt, um die Welt wieder anzuschubsen!',options:[
+ if(i===14){dialog({tag:'DIE GROSSE WENDUNG · KAPITEL 3',title:'Die Katze von morgen',portrait:'🐱 ⏳ 🐱',body:'In der Uhr liegt ein Brief von MOMO … aus der Zukunft! '+mystery().cause+' Doch das Spiegelkätzchen hält immer noch die Zeit fest. Dahlia hat die Farben versteckt, um die Welt wieder anzuschubsen!',options:[
  {label:'💌 Brief lesen – auch das traurige Ende',action:()=>{save.flags.readLetter=true;nextChapter('Brief-Momo: »P.S. Kauf keinen Thunfisch aus der Zukunft.«')}},
  {label:'🔥 Brief zuklappen – ich entscheide selbst!',action:()=>{save.flags.readLetter=false;nextChapter('Momo: »Spoiler sind schlimmer als Gurken!«')}}
  ]})}
@@ -375,7 +375,23 @@ function hitBoss(damage,x,y){
  return true;
 }
 function collect(item){if(item.taken)return;item.taken=true;if(!save.collected.includes(item.id))save.collected.push(item.id);persist();updateUI();sound('pick');if(navigator.vibrate)navigator.vibrate(20);toast(`🍄 ${MUSHROOMS[item.id].name}! ${MUSHROOMS[item.id].hint}`)}
-function hurt(){if(player.inv>0||effects.invincible>0||phase!=='playing')return;player.inv=1.5;if(save.power){burst(player.x+20,player.y+10,POWERS[save.power].color,14)}save.hearts=Math.max(0,save.hearts-1);sound('hurt');updateUI();player.vy=-440;player.vx=-player.facing*240;toast('Autsch! Die Schattenkatze ruft: »Miau-ha-ha!«');if(save.hearts<=0){save.deaths++;save.hearts=3;const newX=save.checkpoint||78;player.x=newX;player.y=320;player.vy=0;player.inv=2;updateUI();toast('Neun Leben? Praktisch unbegrenzt! 🐾')}persist()}
+function gameOver(reason='Alle Leben aufgebraucht!'){
+ save.lives=0;persist();clearInputs();
+ dialog({tag:'GAME OVER · '+diff().name.toUpperCase(),title:'Oh nein! Plüsch-Alarm!',portrait:hero().icon+' 💀 🐾',body:escapeText(reason)+' Alle Leben sind verbraucht. Das ist das Ende dieses Abenteuers.',
+ options:[{label:'🌈 Neues Abenteuer (Figur wählen)',action:characterSelect},{label:'🏠 Hauptmenü',secondary:true,action:menu}]});
+}
+function loseLife(reason){
+ save.deaths++;save.lives=Math.max(0,save.lives-1);
+ if(save.lives===0){gameOver(reason);return}
+ save.hearts=diff().hearts;player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;camY=0;effects={};persist();updateUI();toast('🐾 Ein Leben verloren! Noch '+save.lives+' übrig.');
+}
+function hurt(){
+ if(player.inv>0||effects.invincible>0||phase!=='playing')return;
+ player.inv=1.4;if(save.power)burst(player.x+20,player.y+10,POWERS[save.power].color,14);
+ save.hearts=Math.max(0,save.hearts-1);sound('hurt');updateUI();player.vy=-440;player.vx=-player.facing*240;
+ if(save.hearts<=0)loseLife('Die Gegner waren diesmal stärker!');else toast('Aua! '+hero().name+' hat nur noch '+save.hearts+' Herzen.');
+ persist();
+}
 function jump(){if(phase!=='playing')return;queuedJump=.16}
 function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  const blocked=effects.silence>0;
@@ -400,7 +416,9 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  if(previousBottom<=platform.y+10&&player.y+player.h>=platform.y){if(!landing||platform.y<landing.y)landing=platform}
  }}
  if(landing){player.y=landing.y-player.h;player.vy=0;if(!player.grounded)player.landed=true;player.grounded=true;coyote=.11}else{if(player.grounded)coyote=.11;player.grounded=false}
- if(player.y>HEIGHT+120){save.deaths++;enemyShots=[];shots=[];sound('hurt');save.hearts=Math.max(1,save.hearts-1);const cp=save.checkpoint||78;player.x=cp;player.y=320;player.vx=0;player.vy=0;player.inv=1.5;persist();updateUI();toast('Plumps! Momo landet auf ihrer Würde. 🐾')}
+ if(player.y>1400){enemyShots=[];shots=[];sound('hurt');save.hearts=Math.max(0,save.hearts-1);
+ if(save.hearts<=0)loseLife('Ein sehr, sehr tiefer Plumps!');else{player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;camY=0;persist();updateUI();toast('Plumps! '+hero().name+' landet auf der Würde!')}}
+
  const closeNpc=level.npcs[0];
  if(closeNpc&&Math.abs(player.x-closeNpc[0])<22&&!save.shown.includes('chat'+save.level)){
   save.shown.push('chat'+save.level);persist();talkWithCat();return;
