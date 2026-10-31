@@ -33,7 +33,7 @@ with sync_playwright() as p:
  assert len(foes)>=8,foes
  assert {'speed','invincible','fly','sway','slow','silence'}.issubset(buffs),buffs
  # Positive effect cannot be collected twice per pickup; timer is temporary.
- page.evaluate(f'{api}.enterLevel(3)')
+ page.evaluate(f'{api}.enterLevel(0)')
  page.evaluate(f'{api}.givePower("spark")')
  page.evaluate(f'{api}.giveCharm("speed")')
  assert snapshot()['effects']['speed']>8
@@ -61,7 +61,7 @@ with sync_playwright() as p:
  page.evaluate(f'{api}.giveCharm("sway")')
  assert snapshot()['effects']['slow']>0 and snapshot()['effects']['sway']>0
  page.evaluate(f'{api}.step(9)')
- assert 'slow' not in snapshot()['effects'] and 'sway' not in snapshot()['effects']
+ assert 'slow' not in snapshot()['effects'] and 'sway' not in snapshot()['effects'],(snapshot()['phase'],snapshot()['effects'])
  page.evaluate(f'{api}.position(930,250)')
  page.evaluate(f'{api}.giveCharm("fly")')
  page.keyboard.down('Space')
