@@ -98,12 +98,22 @@ const actOf=i=>Math.floor(Math.max(0,i)/5);
 const isFinal=i=>i===CHAPTERS.length-1;
 // A new local campaign seed changes the mystery, atmosphere, encounters and cat personalities.
 const MYSTERIES=[
- {name:'Die gestohlene Morgenröte',cause:'Ein uralter Sonnengong hält alle Blumen im Gestern gefangen.',clue:'Die Blüten flüstern von einem Gong, der nie geschlagen wurde.',ending:'Als der Sonnengong erklingt, erwacht ein völlig neuer Morgen.'},
- {name:'Die verschwundenen Träume',cause:'Der Traumsammler hat die Wünsche der Katzen in einer Uhr versteckt.',clue:'In den Pilzsporen schlafen Wünsche, die sich an niemanden erinnern.',ending:'Die Träume entkommen der Uhr und tauchen als tanzende Sterne wieder auf.'},
- {name:'Das Lied der letzten Blume',cause:'Das Schweigen des Mondchores ließ die Farben allmählich erblassen.',clue:'Jede verschwundene Farbe ist eine Note eines vergessenen Liedes.',ending:'Der Mondchor stimmt eine neue Melodie an, und die Blumen antworten.'},
- {name:'Die falsche Königin',cause:'Ein Spiegelgeist tauschte die Erinnerungen der Katzen und verwirrte ganz Katzigami.',clue:'Eine Königin hat plötzlich zwei Schatten, aber nur einen Napf.',ending:'Der Spiegelgeist gibt seine Täuschung zu – und bekommt einen eigenen Napf.'},
- {name:'Der endlose Samstag',cause:'Ein ängstliches Zukunftskätzchen wollte einen glücklichen Tag niemals enden lassen.',clue:'Die Uhren haben aufgehört zu ticken, aber die Fische werden älter.',ending:'Die Zeit läuft wieder und Zukunfts-Momo wagt einen neuen Tag.'}
+ {name:'Das verlorene Morgen',clue:'Auf den Wachkatern glänzt Nox’ Uhrensiegel.',cause:'Nox versiegelte die Herzuhr mit der Angst des Spiegelkätzchens.',ending:'Die sieben Glocken schlagen wieder und ein neuer Morgen erwacht.'},
+ {name:'Der gefälschte Befehl',clue:'Pips königlicher Brief trägt unsichtbare Tinte des Uhrmeisters Nox.',cause:'Nox täuschte Pip, der die Königin zu Unrecht beschuldigte.',ending:'Pip lernt, Beweise zu prüfen, bevor er neue Gerüchte verbreitet.'},
+ {name:'Die sieben Sporen',clue:'In den Pilzsporen steckt eine Karte zu den sieben Zeitglocken.',cause:'Die Orakelpilze können die versiegelten Zeitglocken wieder stimmen.',ending:'Sieben Glocken erklingen wie ein neues Lied und erwecken die Blüten.'},
+ {name:'Die verschwundenen Farben',clue:'Im Schloss ist ein Versteck voller sicher verwahrter Blütenfarben.',cause:'Dahlia bewahrte die Farben vor Nox, verdunkelte damit aber selbst den Garten.',ending:'Dahlia gibt die bewahrten Farben frei und übernimmt Verantwortung.'},
+ {name:'Der Spiegel der Angst',clue:'Eine kleine Schattenkatze trägt eine Nachricht aus der Zukunft.',cause:'Zukunfts-Momo wollte aus Verlustangst die Zeit festhalten. Nox nutzte sie aus.',ending:'Spiegel-Momo kann endlich einem neuen Tag begegnen.'}
 ];
+const STORY_ARCS=[
+ {title:'DAS ERSTE VERBLASSEN',place:'Das Blütenreich',portrait:'🌸 🐱 🕰️',beat:'Die Herzuhr ist stehen geblieben und die Blumen verlieren ihre Farben. Nox’ Schattenwächter besetzen die Straßen. Nur sieben Orakelpilze können die Zeitglocken wieder stimmen.'},
+ {title:'STIMMEN UNTER DEN WURZELN',place:'Flüsterwald und Höhlen',portrait:'🌲 🐈 🕯️',beat:'Die Wurzeln verraten: Die Wachkatzen gehorchen Nox, dem verstoßenen Uhrmeister. Pip erhielt gefälschte Befehle. Wer die Wahrheit finden will, muss durch die unterirdischen Tunnel.'},
+ {title:'DIE VERBOTENE SANDUHR',place:'Zuckermond und Wolken',portrait:'🌙 👑 ⌛',beat:'Dahlia gesteht, dass sie die Farben versteckt hat, bevor Nox sie stehlen konnte. Ihr Schutzzauber hat den Garten mit verdunkelt. Sie ist nicht böse, hat aber großen Schaden angerichtet.'},
+ {title:'DAS GESTOHLENE MORGEN',place:'Sternenreich und Spiegel',portrait:'🌌 🪞 🐈‍⬛',beat:'Ein verängstigtes Zukunfts-Ich wollte den schönsten Tag festhalten. Nox manipulierte die Schattenkatze und versiegelte damit die Herzuhr. Du kannst den Bann im Kampf lösen oder versuchen, die gefangene Katze zu retten.'}
+];
+function openingForHero(){
+ const details={cat:'das Mondglöckchen ihres verschwundenen Vaters',dog:'die Uhr seiner verschollenen Schwester',chicken:'ein Ei, das rückwärts zu ticken beginnt',rabbit:'ein Foto, aus dem alle Katzen verschwinden',fox:'einen Brief seiner früheren Mentorin'};
+ return hero().name+' will eigentlich nur zum Blütenfest. Doch als die Herzuhr mitten am Tag verstummt, beginnt '+details[save.character]+' zu leuchten. Eine Warnung erscheint: »Wenn die siebte Glocke schweigt, gibt es kein Morgen mehr.«';
+}
 const CAT_PERSONALITIES=['frech','vorsichtig','dramatisch','verspielt','misstrauisch'];
 const HEROES={
  cat:{name:'Momo',label:'🐱 Momo · Samtpfote',blurb:'Ausgewogen, schnurrende Zaubergeschosse.',icon:'🐱'},
@@ -306,7 +316,7 @@ function talkWithCat(){
  if(phase!=='playing'||!level||!player)return;
  const npc=level.npcs[0],name=npc[1];
  const persona=personality(save.level);
- const prompt=`${name} ist heute ${persona} und fragt: »${mystery().clue} Was sollen wir jetzt tun, Momo?«`;
+ const prompt=`${name} ist heute ${persona} und berichtet: »${mystery().clue}« ${hero().name}, wem glaubst du und was sollen wir als Nächstes tun?`;
  const options=[
  {label:'💗 Wir halten zusammen!',action:()=>answerToCat(name,'Ich helfe dir, wir retten die Katzen zusammen!')},
  {label:'🔍 Ich will die Wahrheit herausfinden!',action:()=>answerToCat(name,'Warum passiert das? Ich suche Beweise und die Wahrheit!')},
@@ -342,7 +352,7 @@ function difficultySelect(character){
  Object.entries(DIFFICULTY).map(([id,d])=>({label:(id==='ultra'?'💀':id==='hard'?'🔥':id==='medium'?'🌸':'💗')+' '+d.name+' · '+d.lives+' Leben · '+d.hearts+' Herzen',
  action:()=>{save=defaultSave();save.character=character;save.difficulty=id;save.lives=d.lives;save.hearts=d.hearts;persist();enterLevel(0,true)}})));
 }
-function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABENTEUER','KATZIGAMI ✿','🐱 🍄 🌸','Momo sucht sieben Pilze und ein neues Geheimnis bei jedem Durchlauf. Du kannst andere Katzen mit selbst geschriebenen Antworten überzeugen – und jede Patrouille reagiert anders. Welche Wendung wartet wohl heute?',[
+function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABENTEUER','KATZIGAMI ✿','🐱 🍄 🌸','Die Herzuhr steht still, Nox kontrolliert die Schattenwächter und Königin Dahlia verbirgt ein gefährliches Geheimnis. Sammle sieben Pilze und entscheide, wem du vertraust – mit fünf Helden und einer Geschichte mit Konsequenzen.',[
  ...(hasSavedGame()&&save.lives>0? [{label:save.won?'🌸 Noch einmal das Finale / weiterspielen':'🐾 Spielstand fortsetzen',action:()=>enterLevel(save.level,true)}]:[]),
  {label:'✿ Neues Abenteuer beginnen',action:characterSelect},
  {label:'🎮 So spielt man',secondary:true,action:help}
@@ -520,27 +530,35 @@ function drawAdventure(){
   round(-17,-36,34,36,12,'#a888c4');ctx.font='25px sans-serif';ctx.fillText(house.used?'🐭':'🎲',-14,-94);ctx.restore()}
  for(const trap of level.routeHazards){const x=trap.x-cam;if(x<-30||x>viewW+30)continue;ctx.fillStyle='#ded0ed';ctx.beginPath();ctx.moveTo(x-20,750);ctx.lineTo(x,840);ctx.lineTo(x+20,750);ctx.fill()}
 }
-function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
+function startDialog(i){
+ if(i===0){
+  const name=hero().name;
+  dialog({tag:'PROLOG · DIE SIEBEN ZEITGLOCKEN',title:'Das gestohlene Morgen',portrait:hero().icon+' 🌸 🕰️',
+   body:openingForHero()+' Die Blumen werden grau und Katzenwächter sperren die Wege. Pilzbote Pip beschuldigt Königin Dahlia – doch auf seinem Befehl steht heimlich das Zeichen des Uhrmeisters NOX. Finde sieben Orakelpilze, rette die Herzuhr und entscheide, wem du glaubst.',
+   options:[
+    {label:'💗 Erst die Bewohner retten!',action:()=>{save.flags.cake=true;persist();resume();toast(name+': »Ich lasse niemanden zurück!«')}},
+    {label:'⚔️ Schnell zu den sieben Zeitglocken!',action:()=>{save.flags.hero=true;persist();resume();toast(name+': »Die Zeit wartet nicht!«')}}
+   ]});return;
+ }
  if(i%5!==0){resume();return}
- const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
-function resume(){musicScene='explore';hideOverlay();phase='playing';enterDynamicEncounters();clearInputs();lastFrame=performance.now();musicAt=0}
-function pause(){if(phase==='playing'){phase='paused';clearInputs();presentCard('PAUSE · EINE KATZE MUSS MAL SITZEN','Miau-Pause','🐱 ☕ 🌸',`Kapitel ${save.level+1}: ${CHAPTERS[save.level].name}. Gesammelte Pilze: ${save.collected.length}/${TOTAL}. Dein Fortschritt ist gespeichert.`,[
- {label:'▶ Weiterhüpfen',action:resume},
- {label:'↩ Kapitel neu starten',action:()=>enterLevel(save.level)},
- {label:'🏠 Hauptmenü',secondary:true,action:menu}
- ])}else if(phase==='paused')resume()}
+ const act=actOf(i),arc=STORY_ARCS[act];let branch='';
+ if(act===1)branch=save.flags.helpedMiso?'Du hast Miso gerettet. Sie hilft dir, Nox’ gefälschte Befehle zu finden.':'Miso ist verletzt, weil du die Karte gewählt hast. Sie bewacht nun eine Abkürzung.';
+ if(act===2)branch=save.flags.trustedQueen?'Dahlia zeigt dir einen geheimen Mondsteg und überreicht Beweise.':'Du vertraust Pip. Dahlia verweigert dir einen sicheren Weg, aber du kannst Beweise selbst suchen.';
+ if(act===3)branch=save.flags.readLetter?'Du kennst Spiegel-Momos Trauer und kannst mit ihr sprechen.':'Du hast den Brief nicht gelesen. Die Schattenkatze bleibt rätselhaft, aber ein Pilz könnte Frieden stiften.';
+ dialog({tag:'AKT '+(act+1)+' · '+arc.title,title:arc.place,portrait:arc.portrait,body:arc.beat+' '+branch+' '+mystery().clue,options:[{label:'🐾 Der Spur folgen!',action:resume}]});
+}
 function checkEndOfLevel(){if(phase!=='playing')return;if(isFinal(save.level)){if(!boss.done){toast('Ein magischer Spiegel versperrt den Ausgang!');player.x=Math.min(player.x,level.width-230);return}endChoice();return}
  const i=save.level;
  if(i%5!==4){nextChapter('Neue Strecke, neue Abenteuer! 🐱');return}
- if(i===4){dialog({tag:'PLOT TWIST · KAPITEL 1',title:'Miso in der Seifenblase',portrait:'🐈 🫧 🐱',body:'Kätzchen Miso hängt in einer riesigen Seifenblase. Gleichzeitig flattert eine Karte mit geheimen Abkürzungen davon. Pip ruft: »Rette die Karte! Katzen haben neun Leben!«',options:[
+ if(i===4){dialog({tag:'PLOT TWIST · KAPITEL 1',title:'Die Geisel und die Karte',portrait:'🐈 🫧 🗺️',body:'Nox’ Wachkatzen haben Miso in einer Seifenblase gefangen. Gleichzeitig flattert eine Karte zu den sieben Zeitglocken davon. Pip ruft: »Hol die Karte!« Wen willst du retten?',options:[
  {label:'💗 Miso retten – Freunde sind wichtiger!',action:()=>{save.flags.helpedMiso=true;nextChapter('Miso: »Ich schulde dir ein Leben. Und eine Pizza.«')}},
  {label:'🗺️ Karte jagen – die Mission geht vor!',action:()=>{save.flags.helpedMiso=false;nextChapter('Miso: »Ich merke mir das. Sehr detailliert.«')}}
  ]})}
- if(i===9){dialog({tag:'PLOT TWIST · KAPITEL 2',title:'Die Königin hat ein Geheimnis',portrait:'👑 🐈 🐾',body:'Königin Dahlia sagt, sie habe alle Farben in einer Sanduhr versteckt, um den Wald vor dem ewigen Stillstand zu retten. Pip ruft: »Das sagen ALLE verdächtigen Katzen!«',options:[
+ if(i===9){dialog({tag:'PLOT TWIST · KAPITEL 2',title:'Dahlias riskantes Geständnis',portrait:'👑 🐈 ⌛',body:'Dahlia gesteht: »Ich versteckte die Farben vor Nox. Mein Schutzzauber ließ den Wald verdunkeln. Es tut mir leid.« Pip protestiert: »Sie könnte lügen!« Königin oder Bote – wem glaubst du?',options:[
  {label:'🌷 Dahlia glauben – ihre Geschichte anhören',action:()=>{save.flags.trustedQueen=true;nextChapter('Dahlia: »Endlich jemand mit Ohren UND Gehirn.«')}},
  {label:'🦉 Pip glauben – die Königin ist schuld!',action:()=>{save.flags.trustedQueen=false;nextChapter('Pip: »Ich war nie eine Eule! Ich bin ein KATER!«')}}
  ]})}
- if(i===14){dialog({tag:'DIE GROSSE WENDUNG · KAPITEL 3',title:'Die Katze von morgen',portrait:'🐱 ⏳ 🐱',body:'In der Uhr liegt ein Brief von MOMO … aus der Zukunft! '+mystery().cause+' Doch das Spiegelkätzchen hält immer noch die Zeit fest. Dahlia hat die Farben versteckt, um die Welt wieder anzuschubsen!',options:[
+ if(i===14){dialog({tag:'DIE GROSSE WENDUNG · KAPITEL 3',title:'Die Stimme im Spiegel',portrait:'🐱 ⏳ 🐈‍⬛',body:'Der Brief aus der Zukunft enthüllt: Spiegel-Momo fürchtet einen schmerzhaften Abschied und wollte die Zeit aufhalten. Nox nutzte die Angst aus, versiegelte die Herzuhr und beschuldigte Dahlia. Der vermeintliche Endgegner könnte ein Opfer sein.',options:[
  {label:'💌 Brief lesen – auch das traurige Ende',action:()=>{save.flags.readLetter=true;nextChapter('Brief-Momo: »P.S. Kauf keinen Thunfisch aus der Zukunft.«')}},
  {label:'🔥 Brief zuklappen – ich entscheide selbst!',action:()=>{save.flags.readLetter=false;nextChapter('Momo: »Spoiler sind schlimmer als Gurken!«')}}
  ]})}
@@ -550,7 +568,7 @@ function bossTalk(){if(phase!=='playing'||boss.triggered)return;boss.triggered=t
  if(empathic){options.push({label:'💞 »Ich weiß, wer du bist. Komm mit, Zukunfts-Momo.«',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Du hast mich … nicht gehasst?«')}})}
  else if(canOffer){options.push({label:'🍄 Einen Pilz teilen – Frieden?',action:()=>{boss.done=true;save.flags.kindShadow=true;persist();resume();toast('Spiegel-Momo: »Ist das … Käsegeschmack?!«')}})}
  options.push({label:'⚔️ »Dann tanzen wir, Schattenpfote!« (12 Herzen)',action:()=>{boss.active=true;save.flags.kindShadow=false;persist();resume();toast('Spring dem Spiegelkätzchen zweimal auf den Kopf!')}});
- dialog({tag:'FINALE · DER SPIEGEL',title:'Du bist … ICH?!',portrait:'🐱 🪞 🐈‍⬛',body:'Spiegel-Momo: »'+mystery().cause+' Niemand sollte sich fürchten. Aber jetzt können die Blumen nicht mehr wachsen … und mein Fischstäbchen ist seit 700 Jahren kalt!«',options})}
+ dialog({tag:'FINALE · DER SPIEGEL',title:'Du bist … ICH?!',portrait:'🐱 🪞 🐈‍⬛',body:'Nox tritt aus der Uhr: »Ein Morgen, das ich nicht beherrsche, darf nicht existieren.« Spiegel-Momo zittert: »Ich wollte nur verhindern, dass wir noch jemanden verlieren.« Die Schattenkatze ist gefangen zwischen Schuld und Angst. Du kannst Frieden versuchen oder kämpfen.',options})}
 function endChoice(){if(phase!=='playing')return;dialog({tag:'FINALE · DEINE ENTSCHEIDUNG',title:'Die Uhr tickt wieder',portrait:'🌈 🐱 ⏳',body:`Du hast ${save.collected.length} von ${TOTAL} Orakelpilzen. Momo hält die Sanduhr in den Pfoten. Die Welt kann wieder wachsen – oder für immer in einem hübschen Augenblick bleiben.`,options:[
  {label:'🌸 Zeit freigeben – Veränderung wagen',action:()=>ending('release')},
  {label:'🌙 Alles für immer bewahren – den Moment einfrieren',action:()=>ending('freeze')}
