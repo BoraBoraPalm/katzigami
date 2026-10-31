@@ -3,7 +3,7 @@
 
 **🎮 [Jetzt am Handy spielen!](https://boraborapalm.github.io/katzigami/)**
 
-**🌸 20 lange Level** · **🌈 4 Welten mit Wolken- & Höhlenwegen** · **😼 13 Gegnertypen** · **🍄 7 Orakelpilze**
+**🏰 7 spielerisch unterschiedliche Welten** · **🎮 20 lange Level** · **🍄 7 Orakelpilze** · **🐾 5 spielbare Tiere**
 
 **🕰️ Story:** Uhrmeister **Nox** hält die Zeit an. Sammle sieben Pilze, decke Pips Lügen auf und entscheide, ob Königin Dahlia und Spiegel-Momo Verbündete oder Gegner sind.
 
@@ -16,6 +16,20 @@
 **🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen Leben, tiergerechte animierte Outfits oder kleine Kräfte gewinnen.
 
 **🎨 Vier spielerisch verschiedene Welten** – federnde Blüten, Wurzelbrücken, Kristalleis und Uhrwerkfallen · **🎵 Dynamische Originalmusik** für Kampf, Boss, Höhlen, Wolken, Vogel- und Schneckenritt, Magie, Flüche und Story.
+
+## 🌈 Sieben Welten – sieben Spielweisen
+
+| Welt | Besonderheit |
+|---|---|
+| 🏰 **Geisterschloss** | Türen mit Geistern, fallende Porträts, Deckenvampire, Kerker |
+| ❄️ **Schneesturm** | Eisbären, rutschiges/brüchiges Eis, Erfrierungs-Timer, Iglus |
+| 🌿 **Dschungel** | Schwingen an Lianen, Bananenfallen, Affen, Piranhas |
+| 🏎️ **Rennstrecke** | Gegen einen fahrbaren Rivalen ins Ziel, Boosts und Hürden |
+| 🌙 **Mond** | Niedrige Gravitation, starke Trägheit, Meteoriten und UFOs |
+| 🌊 **Tiefsee** | Freies Schwimmen, langsames U-Boot mit Luftschlauch, Atlantis |
+| 🏔️ **Berge** | Gipfelplattformen, Steinschlag, Höhenwind und Lawinen |
+
+**Steuerung:** Lianen mit gedrückter Sprungtaste greifen, mit ◀ ▶ schwingen und **Sprung loslassen** zum Abspringen. Unter Wasser **Sprung halten = auftauchen**, loslassen = abtauchen. Ansonsten bleiben alle Handy-Tasten gleich.
 
 ## ✨ Tierkräfte – unbedingt einsammeln!
 
