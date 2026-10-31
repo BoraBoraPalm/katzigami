@@ -3,11 +3,17 @@
 
 **🎮 [Jetzt am Handy spielen!](https://boraborapalm.github.io/katzigami/)**
 
-**🌸 12 lange Level** · **🌈 4 zauberhafte Welten** · **😼 9 Gegnertypen** · **🍄 7 Orakelpilze**
+**🌸 20 lange Level** · **🌈 4 Welten mit Wolken- & Höhlenwegen** · **😼 13 Gegnertypen** · **🍄 7 Orakelpilze**
 
-Begleite Katze **Momo** durch verrückte Blumenwelten, triff eigenwillige Katzen, sammle Pilze und enthülle eine Geschichte voller Überraschungen. Deine Antworten verändern Freundschaften, Gegner und den Verlauf des Abenteuers!
+Wähle **🐱 Momo, 🐶 Bello, 🐔 Kiki, 🐰 Luna oder 🦊 Fips** – gleich stark, aber mit unterschiedlichen Angriffsstilen. Erkunde versteckte Pfade, triff schräge Tiere und entscheide selbst, wie die Geschichte ausgeht!
 
-## ✨ Katzenkräfte – unbedingt einsammeln!
+**🎚️ Leicht · Mittel · Schwer · Ultra** – mit begrenzten Leben und echtem Game Over.
+
+**🌀 Schwingende Saugschläuche** führen in schwebende Wolken, Maulwurfstollen und Tropfsteinhöhlen. **🐦 Mit etwas Geschick Vogelreiten (6 s)** oder **🐌 auf einer Wand- und Deckenschnecke mitfahren (8 s)**. Abspringen mit derselben Sprungtaste!
+
+**🪙 Münzen: 1 / 5 / 20** · **🏠 Würfelhäuser:** für 10 Münzen mit etwas Glück Leben, lustige Hüte, Kostüme oder kleine Kräfte gewinnen.
+
+## ✨ Tierkräfte – unbedingt einsammeln!
 
 | 🐟 Turbo-Mieze | ⭐ Unbesiegbare Pfote | 🪽 Flatterkatze |
 |:---:|:---:|:---:|
@@ -27,7 +33,7 @@ Begleite Katze **Momo** durch verrückte Blumenwelten, triff eigenwillige Katzen
 
 **🌸 Blütenpfote → ⚡ Funkelpfote → 🌙 Mondpfote → ✨ Sternenpfote**
 
-Jeder besondere Verwandlungspilz macht Momo stärker und verändert Aussehen und Spezialangriff. Die Spezialtaste wird erst durch einen solchen Pilz freigeschaltet!
+Jeder besondere Verwandlungspilz macht deinen Helden stärker und verändert Aussehen und Spezialangriff. Die Spezialtaste wird erst durch einen solchen Pilz freigeschaltet!
 
 ## 🕹️ Steuerung
 
@@ -35,7 +41,7 @@ Jeder besondere Verwandlungspilz macht Momo stärker und verändert Aussehen und
 
 **⌨️ PC:** A/D oder ←/→ · Leertaste zum Springen · X/J für Spezialattacken.
 
-**💾 Automatisches Speichern** im Browser – kein Konto erforderlich.
+**💾 Automatisches Speichern** von Figur, Münzen, Würfelgewinnen, Level und Entscheidungen – kein Konto erforderlich.
 
 **💬 Eigene Dialogantworten:** lokale, regelbasierte Reaktionen (keine generative Online-KI). Jeder neue Durchlauf variiert Geschichte und Gegner.
 
