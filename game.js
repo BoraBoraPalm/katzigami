@@ -605,7 +605,7 @@ function mountPosition(m,t){
  if(m.kind==='bird'){
    const u=(t*.16+m.phase)%1;
    const ping=u<.5?u*2:(1-u)*2;
-   m.x=m.from+span*ping;
+   m.x=clamp(m.from+span*ping+(m.steerOffset||0),m.from,m.to);
    m.y=-583+Math.sin(t*3.5+m.phase)*17;
    m.angle=Math.sin(t*3.5+m.phase)*.1;
  }else{
@@ -630,6 +630,7 @@ function updateRiding(dt){
  const m=level.mounts.find(v=>v.id===ride.id);
  if(!m){player.riding=null;return false}
  ride.left=Math.max(0,ride.left-dt);
+ if(m.kind==='bird')m.steerOffset=clamp((m.steerOffset||0)+(Number(vxInput.right)-Number(vxInput.left))*110*dt,-100,100);
  // Rotate the passenger around the snail's shell on walls and ceilings.
  const angle=m.kind==='snail'?(m.angle||0):0;
  player.x=clamp(m.x+Math.sin(angle)*57-player.w*.5,0,level.width-player.w);
