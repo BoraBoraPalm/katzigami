@@ -237,7 +237,7 @@ function showSaveManager(returnToGame=false){
  const slots=namedSlots();phase='paused';clearInputs();
  presentCard('💾 SPIELSTÄNDE','Deine Abenteuer',hero().icon+' 📜 ✨',
   'Benannte Spielstände kannst du einzeln laden oder löschen. Bis zu acht Speicherplätze, lokal in diesem Browser. Die automatische Speicherung bleibt erhalten.',
-  [...slots.map(slot=>({label:'📖 '+slot.name+' · Level '+(slot.level+1)+' · 🪙 '+slot.coins,action:()=>showSlotActions(slot.name,returnToGame)})),
+  [...slots.map(slot=>({label:'📖 '+escapeText(slot.name)+' · Level '+(slot.level+1)+' · 🪙 '+slot.coins,action:()=>showSlotActions(slot.name,returnToGame)})),
    {label:'✏️ Neuen Spielstand speichern',action:()=>showSaveNameEditor(returnToGame)},
    {label:'↩ Zurück',secondary:true,action:returnToGame?pauseMenu:menu}]);
 }
@@ -260,7 +260,7 @@ function showSlotActions(name,returnToGame){
  const slot=namedSlots().find(v=>v.name===name);
  if(!slot)return showSaveManager(returnToGame);
  phase='paused';
- presentCard('📜 MANUELLER SPIELSTAND',slot.name,hero().icon+' 💾 🌼',
+ presentCard('📜 MANUELLER SPIELSTAND',escapeText(slot.name),hero().icon+' 💾 🌼',
   'Gespeichert in Level '+(slot.level+1)+'. '+slot.coins+' Münzen. Laden ersetzt den automatischen Spielstand, andere benannte Speicherplätze bleiben erhalten.',
   [{label:'▶ Diesen Spielstand laden',action:()=>{if(!restoreNamedSlot(name)){showSaveManager(returnToGame);toast('Spielstand konnte nicht geladen werden.')}}},
    {label:'🗑 Diesen Spielstand löschen',secondary:true,action:()=>{removeNamedSlot(name);showSaveManager(returnToGame)}},
