@@ -42,7 +42,7 @@ with sync_playwright() as p:
     click(page,0) # cake
     check(snapshot(page)['phase']=='playing','intro choice did not resume')
     oldx=snapshot(page)['player']['x']
-    page.keyboard.down('ArrowRight');page.wait_for_timeout(450);page.keyboard.up('ArrowRight')
+    page.keyboard.down('ArrowRight');page.evaluate('window.__katzigamiTest.step(.48)');page.keyboard.up('ArrowRight')
     x=snapshot(page)['player']['x']
     check(x>oldx+40,f'keyboard movement failed: {oldx}->{x}')
     # Explicitly land before jump: test keyboard jumping, not bootstrap falling time.
