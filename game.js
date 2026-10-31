@@ -568,10 +568,33 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
    enemy.hp=Math.max(2,Math.ceil(enemy.hp*1.1));enemy.maxHp=enemy.hp;enemies.push(enemy);
   }
  }
- const guestName=FRIEND_SCHEDULE[i]||'Pip',friendId='friend-'+i+'-'+guestName;
+ // Four rule families make traversal itself different, not just the background.
+ const challengeKinds=[
+  ['blossom','updraft','blossom','updraft','blossom'],
+  ['vine','root','vine','root','vine'],
+  ['ice','jelly','ice','jelly','ice'],
+  ['pendulum','shutter','gear','pendulum','shutter']
+ ];
+ const challenges=[],worldAct=actOf(i);
+ const layout=challengeKinds[worldAct]||challengeKinds[3];
+ for(let j=0;j<5;j++){
+  let x=Math.round(850+(j+.5)*(d.width-1550)/5);
+  const gap=d.gaps.find(([from,to])=>x>from-100&&x<to+90);
+  if(gap)x=gap[0]-130;
+  x=clamp(x,790,d.width-400);
+  const kind=layout[(j+i)%5],obj={id:'challenge-'+i+'-'+j,type:kind,x,phase:i+j*1.4,active:false,remaining:0,cooldown:0,crumbles:0,open:false};
+  if(kind==='vine'){
+    const target=d.gaps.find(g=>g[0]>x&&g[0]<x+660);
+    if(target){obj.bridge=[target[0],target[1]];obj.x=target[0]-135}
+  }
+  if(kind==='root'){obj.platform={x:x-35,y:348,w:135,h:25,ground:false,route:'root',breakable:true};platforms.push(obj.platform)}
+  if(kind==='gear'){obj.platform={x:x-20,y:345,w:150,h:24,ground:false,moving:true,route:'gear',baseX:x-20,baseY:345};platforms.push(obj.platform)}
+  challenges.push(obj);
+ }
+const guestName=FRIEND_SCHEDULE[i]||'Pip',friendId='friend-'+i+'-'+guestName;
  const visitor={id:friendId,name:guestName,x:Math.round(d.width*(i%3===0?.31:i%3===1?.40:.48)),y:390,status:save.friendEncounters.includes(friendId)?'departed':'waiting',injury:INJURY_LEVELS[i]===guestName};
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,visitor,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,visitor,challenges,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 // Bonus routes, collectible coins and a free once-per-house dice reward.
 function takeCoin(coin){
  if(coin.taken)return;coin.taken=true;const value=COIN_VALUES[coin.type]||1;
@@ -760,6 +783,106 @@ function drawCompanion(){
    ctx.textAlign='center';ctx.font='bold 13px Nunito,sans-serif';ctx.fillStyle='#fff8e8';
    ctx.fillText(companion.name+' • '+Math.ceil(Math.max(0,companion.remaining)/100)+' ✿',x,y-72);ctx.restore();
   }
+ }
+}
+const CHALLENGE_LABELS={
+ blossom:'🌸 Blütensprung: Spring auf der federnden Blume!',
+ updraft:'🌬️ Windblume: Der Luftstrom trägt dich nach oben!',
+ vine:'🌿 Wurzelhebel: Lass eine Brücke aus dem Boden wachsen!',
+ root:'🍂 Brüchige Wurzel: Nicht zu lange stehen bleiben!',
+ ice:'🧊 Kristalleis: Vorsicht, rutschiger Boden!',
+ jelly:'🍮 Mondgelee: Spring auf der glibberigen Plattform!',
+ pendulum:'🕰️ Uhrpendel: Den richtigen Moment abpassen!',
+ shutter:'⏳ Zeittor: Warte auf die offene Phase oder spring!',
+ gear:'⚙️ Zahnräder: Bewegliche Plattformen nach oben nutzen!'
+};
+function nearbyChallenge(){return level?.challenges?.find(o=>Math.abs(player.x+player.w*.5-o.x)<92&&!player.route)}
+function tickChallenges(dt){
+ if(!level||!player||phase!=='playing')return;
+ for(const o of level.challenges){
+  o.cooldown=Math.max(0,o.cooldown-dt);
+  const close=Math.abs(player.x+player.w*.5-o.x)<(o.type==='ice'?110:62);
+  if(close&&!o.announced){o.announced=true;toast(CHALLENGE_LABELS[o.type]||'✦ Neues Hindernis!')}
+  if(!close&&o.announced&&Math.abs(player.x-o.x)>280)o.announced=false;
+  if(o.type==='blossom'&&close&&player.grounded&&vxInput.jump&&!o.cooldown){
+   o.cooldown=2.3;player.vy=-930;player.grounded=false;player.y-=5;burst(o.x,430,'#ffcae3',22);sound('jump');
+  }
+  if(o.type==='updraft'&&close&&player.y<425&&player.y>65&&vxInput.jump){
+    player.vy=Math.max(-460,player.vy-1350*dt);if(!o.cooldown){o.cooldown=1;burst(o.x,340,'#e1faff',12)}
+  }
+  if(o.type==='vine'){
+   if(close&&!o.active){o.active=true;o.remaining=21;burst(o.x,439,'#9de0a7',18);sound('choice');
+     if(o.bridge){const [from,to]=o.bridge;
+      o.platform={x:from+5,y:411,w:to-from-10,h:24,ground:false,helper:true,route:'root'};
+      level.platforms.push(o.platform)}
+   }
+   if(o.active&&o.remaining>0)o.remaining=Math.max(0,o.remaining-dt);
+   // Root bridges stay for the level, so changing routes never creates unwinnable falls.
+  }
+  if(o.type==='root'&&o.platform){
+   const p=o.platform,standing=player.grounded&&Math.abs(player.y+player.h-p.y)<6&&player.x+player.w>p.x&&player.x<p.x+p.w;
+   if(standing)o.crumbles+=dt;
+   if(o.crumbles>.85){p.y=1600;o.remaining=3;o.crumbles=0}
+   if(o.remaining>0){o.remaining-=dt;if(o.remaining<=0){p.y=348}}
+  }
+  if(o.type==='jelly'&&close&&player.grounded&&!o.cooldown){
+   o.cooldown=1.8;player.vy=-810;player.grounded=false;player.y-=4;
+   burst(o.x,430,'#ffc8f1',18);sound('jump')
+  }
+  if(o.type==='gear'&&o.platform){
+   const p=o.platform,prev=p.y;p.y=p.baseY+Math.sin(clock*1.35+o.phase)*95;
+   p.x=p.baseX+Math.cos(clock*.55+o.phase)*25;
+   if(player.grounded&&player.x+player.w>p.x&&player.x<p.x+p.w&&Math.abs(player.y+player.h-prev)<8)player.y+=p.y-prev;
+  }
+  if(o.type==='pendulum'&&close){
+   const bobX=o.x+Math.sin(clock*1.9+o.phase)*67, bobY=405+Math.cos(clock*1.9+o.phase)*25;
+   if(Math.abs(player.x+player.w/2-bobX)<23&&Math.abs(player.y+player.h/2-bobY)<31)hurt();
+  }
+  if(o.type==='shutter'){
+   o.open=Math.sin(clock*1.9+o.phase)>.05;
+   if(!o.open&&!player.route&&player.y+player.h>298&&Math.abs(player.x+player.w*.5-o.x)<24){
+    const left=player.x<o.x;
+    player.x=left?o.x-player.w-20:o.x+21;player.vx=0;
+   }
+  }
+ }
+}
+function drawChallenges(){
+ if(!level?.challenges)return;
+ for(const o of level.challenges){
+  const x=o.x-cam;if(x<-155||x>viewW+155)continue;
+  ctx.save();ctx.translate(x,0);
+  if(o.type==='blossom'){
+    for(let i=0;i<8;i++){const a=Math.PI*2*i/8+Math.sin(clock*2)*.07;ellipse(Math.cos(a)*25,430+Math.sin(a)*11,14,11,i%2?'#ffc1e1':'#fbe3f1',a)}
+    ellipse(0,430,23,11,'#f6c66e');ellipse(0,426,11,5,'#ffefb3');
+  }else if(o.type==='updraft'){
+    for(let i=0;i<5;i++){const yy=440-((clock*56+i*79)%340);
+     ctx.globalAlpha=.3+.14*i;ctx.strokeStyle='#b4eff4';ctx.lineWidth=6;ctx.beginPath();ctx.arc(Math.sin(clock*2+i)*30,yy,13,0,Math.PI*1.2);ctx.stroke()}
+    ctx.globalAlpha=1;ellipse(0,438,37,12,'#9ddbbe');ellipse(0,435,17,8,'#f8edc4');
+  }else if(o.type==='vine'){
+    round(-18,404,36,46,7,'#8f6b54','#d4c2a1',3);
+    ctx.strokeStyle=o.active?'#97d899':'#d4a680';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(0,414);ctx.lineTo(o.active?27:-21,o.active?388:398);ctx.stroke();
+    ellipse(o.active?27:-21,o.active?388:398,10,10,'#d2f3ad');
+    if(o.active){ctx.font='25px serif';ctx.fillText('❧',6,377)}
+  }else if(o.type==='root'){if(o.platform?.y>1400){ctx.globalAlpha=.4;ctx.font='25px serif';ctx.fillText('✧',-8,358)}else{ctx.strokeStyle='#bda17f';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-31,360);ctx.bezierCurveTo(-17,327,23,358,44,335);ctx.stroke()}}
+  else if(o.type==='ice'){
+    ctx.fillStyle='#aee9f3a9';ctx.strokeStyle='#fffef9';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-105,449);ctx.lineTo(-86,425);ctx.lineTo(88,425);ctx.lineTo(106,449);ctx.closePath();ctx.fill();ctx.stroke();
+    for(let i=-2;i<=2;i++)ellipse(i*33,432+i%2*5,11,2,'#fff8ff');
+  }else if(o.type==='jelly'){
+    ctx.save();ctx.translate(0,435);ctx.scale(1+Math.sin(clock*8)*.05,1-Math.sin(clock*8)*.06);
+    ellipse(0,0,55,17,'#e9b0e6');ellipse(0,-10,50,22,'#f6c7ed');ellipse(-14,-13,5,5,'#fffdfd');ellipse(14,-13,5,5,'#fffdfd');ctx.restore();
+  }else if(o.type==='pendulum'){
+    line(0,190,Math.sin(clock*1.9+o.phase)*67,405+Math.cos(clock*1.9+o.phase)*25,'#d8bca9',7);
+    ellipse(Math.sin(clock*1.9+o.phase)*67,405+Math.cos(clock*1.9+o.phase)*25,26,28,'#cca3ae');ellipse(Math.sin(clock*1.9+o.phase)*67,405+Math.cos(clock*1.9+o.phase)*25,13,15,'#fff0ca');
+  }else if(o.type==='shutter'){
+    round(-22,295,44,155,6,o.open?'#cce3d260':'#8474a8',o.open?'#d1eac5':'#e5c19e',4);
+    for(let i=0;i<6;i++)line(-14,308+i*23,14,308+i*23,'#fff1ca',3);
+    ctx.font='bold 18px sans-serif';ctx.fillStyle='#fff7d4';ctx.fillText(o.open?'✓':'⌛',-9,289);
+  }else if(o.type==='gear'){
+    for(let i=0;i<8;i++){const a=clock*.9+i*Math.PI/4;ellipse(Math.cos(a)*37,330+Math.sin(a)*37,11,13,'#d3b4db',a)}
+    ellipse(0,330,37,38,'#9a7baf');ellipse(0,330,14,15,'#f7eac2');
+  }
+  ctx.restore();
  }
 }
 function startDialog(i){
@@ -1005,7 +1128,7 @@ function drawMount(m){
  if(player?.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
-function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();tickCompanion(dt);if(phase!=='playing')return;
+function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;discoverStoryEcho();tickCompanion(dt);if(phase!=='playing')return;tickChallenges(dt);
  for(const mount of level.mounts){if(mount.testFreeze>0)mount.testFreeze=Math.max(0,mount.testFreeze-dt);else mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
  if(updateRiding(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
@@ -1021,7 +1144,8 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;dis
  player.inv=Math.max(0,player.inv-dt);boss.inv=Math.max(0,boss.inv-dt);powerFlash=Math.max(0,powerFlash-dt);specialCooldown=Math.max(0,specialCooldown-dt);coyote=Math.max(0,coyote-dt);queuedJump=Math.max(0,queuedJump-dt);
  const speedFactor=(effects.speed>0?1.65:1)*(effects.slow>0?.52:1)*(player.dizzy>0?.64:1);
  const target=(Number(vxInput.right)-Number(vxInput.left))*330*speedFactor;
- const acceleration=player.grounded?2350:1470;
+ const slick=level.challenges?.some(o=>o.type==='ice'&&Math.abs(player.x+20-o.x)<115&&player.grounded&&!player.route);
+ const acceleration=slick?330:(player.grounded?2350:1470);
  player.vx+=(target-player.vx)*Math.min(1,dt* (acceleration/330));if(Math.abs(target)<1&&Math.abs(player.vx)<4)player.vx=0;
  if(target)player.facing=target>0?1:-1;
  if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=save.perk==='bounce'?-750:-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
@@ -1574,7 +1698,7 @@ function drawHero(x,y,bob){
 function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/viewW,0,0,canvas.height/HEIGHT,0,0);
  if(effects.sway>0||effects.dizzy>0){ctx.translate(Math.sin(clock*12)*13,Math.cos(clock*8)*6);ctx.rotate(Math.sin(clock*5)*.009)}
  sky();drawParticles();ctx.save();ctx.translate(0,-camY);drawVerticalWorld();
- for(const p of [...level.ground,...level.platforms,...level.routePlatforms])drawGround(p);
+ for(const p of [...level.ground,...level.platforms,...level.routePlatforms])drawGround(p);drawChallenges();
  for(let j=0;j<level.width/100;j++){const x=j*101+22;if(x<cam-20||x>cam+viewW+25)continue;const grounded=level.ground.some(p=>x>=p.x+9&&x<p.x+p.w-9);if(grounded){flower(x-cam,441,.56+rand(j*5+1)*.5,j);if(j%4===0)flower(x-cam+25,448,.37,j*2)}}
  for(const p of level.checkpoints){const x=p-cam;if(x<-30||x>viewW+30)continue;line(x,450,x,373,'#a5819d',5);ctx.font='29px sans-serif';ctx.fillText(save.checkpoint>=p?'💗':'🌼',x-16,375)}
  for(const item of level.items)drawMushroom(item);drawPowerMushroom(level.powerItem);for(const charm of level.charms)drawCharm(charm);for(const coin of level.coins)drawCoin(coin);drawHouses();for(const tube of level.tubes)drawTube(tube);
@@ -1607,6 +1731,8 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
  stage.addEventListener('contextmenu',e=>e.preventDefault());resize();updateUI();menu();requestAnimationFrame(frame);
  // A narrow, opt-in interface for automated browser regression tests; not active in normal play.
  if(new URLSearchParams(location.search).has('test'))window.__katzigamiTest={
+  challengeDebug:()=>level.challenges.map(({id,type,x,active,remaining,open,crumbles})=>({id,type,x,active,remaining,open,crumbles})),
+  challengeTouch:(type)=>{const o=level.challenges.find(c=>c.type===type);if(!o)return false;player.x=o.x-20;player.y=390;player.grounded=true;vxInput.jump=true;tickChallenges(1/60);vxInput.jump=false;return o.active||player.vy<0||o.open||o.cooldown>0},
   friendDebug:()=>({visitor:level.visitor,companion:companion&&{...companion},friends:save.friends,meetings:save.friendEncounters.slice()}),
   friendMeet:()=>{if(!level.visitor)return false;player.x=level.visitor.x-20;friendMeeting();return true},
   friendHeal:()=>{if(!level.visitor)return false;return healFriend(level.visitor)},
