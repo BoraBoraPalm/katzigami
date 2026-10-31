@@ -1,14 +1,14 @@
 # 🐱 KATZIGAMI – Das Pilzorakel 🌸
 
-Ein eigenständiges, kostenloses Katzen-Jump-'n'-Run für Handys und Desktop. Vier bunte Blumenwelten, sieben magische Pilze, lustige synthetisierte Sounds, ein Spiegelkatzen-Boss und Dialogentscheidungen, die die Handlung, Abkürzungen, Gegner und mehrere Enden verändern.
+Ein eigenständiges, kostenloses Katzen-Jump-'n'-Run für Handys und Desktop. Vier musikalisch und visuell unterschiedliche Blumenwelten, sieben Orakelpilze und vier zusätzliche Verwandlungspilze, neue Katzen-Lauf- und Sprunganimationen, lustige synthetisierte Sounds, ein Spiegelkatzen-Boss und Dialogentscheidungen, die die Handlung, Abkürzungen, Gegner und mehrere Enden verändern.
 
 **Spielen:** https://boraborapalm.github.io/katzigami/
 
 ## Bedienung
 
-- **Handy:** Linke Daumentasten `◀` / `▶` zum Laufen, rechte große Taste `HÜPF!` zum Springen. Für größere Sprünge gedrückt halten. Querformat empfohlen, Hochformat funktioniert ebenfalls.
-- **PC:** `A`/`D` oder Pfeiltasten zum Laufen, `Leertaste`, `W` oder `↑` zum Springen. `Esc` pausiert.
-- **Pilze:** Berühren, um sie einzusammeln. An Checkpoint-Blumen wird automatisch gespeichert. Auf kleine Schattenkatzen kannst du springen.
+- **Handy:** Linke Daumentasten `◀` / `▶` zum Laufen, rechte große Taste `HÜPF!` zum Springen. Die neue **Magietaste unmittelbar links daneben** ist erst nach dem Aufsammeln eines speziellen Verwandlungspilzes aktiv. Original-Lauf- und Sprungtasten bleiben unverändert groß und an ihrem bisherigen Platz. Für größere Sprünge gedrückt halten. Querformat empfohlen, Hochformat funktioniert ebenfalls.
+- **PC:** `A`/`D` oder Pfeiltasten zum Laufen, `Leertaste`, `W` oder `↑` zum Springen. `X` oder `J` aktiviert die Spezialfähigkeit nach einer Verwandlung, `Esc` pausiert.
+- **Pilze:** Berühren, um sie einzusammeln. Die sieben Orakelpilze sind reine Sammelobjekte. Die vier leuchtenden Verwandlungspilze (je einer pro Level) schalten **Blütenpfote**, **Funkelpfote**, **Mondpfote** bzw. **Sternenpfote** frei. Die zugehörige Spezialtaste zaubert Projektile, die Schattenkatzen und den Boss treffen können. Bei Schaden verliert Momo die Verwandlung; die Taste wird wieder gesperrt. An Checkpoint-Blumen wird automatisch gespeichert. Auf kleine Schattenkatzen kannst du springen.
 - **Story:** Entscheidungen werden in den Spielstand aufgenommen und verändern die folgenden Level, den Bosskampf und das Ende.
 
 ## Geschichte
@@ -17,7 +17,7 @@ Momo sucht sieben Orakelpilze, um die Farben des Waldes zu retten. Ist Königin 
 
 ## Speichern und Datenschutz
 
-Spielstände liegen ausschließlich lokal im Browser (`localStorage`, Schlüssel `katzigami-v1`). Sie enthalten Fortschritt, gesammelte Pilze, Checkpoints, Dialogentscheidungen und Audio-Einstellung. Es gibt keine Anmeldung, kein Tracking, keinen Server für Spielstände und keine geräteübergreifende Synchronisierung. Beim Löschen der Browser-Website-Daten geht der Spielstand verloren. GitHub Pages bietet HTTPS; der optionale Service Worker erlaubt nach dem ersten Besuch Offline-Aufrufe des Spiels.
+Spielstände liegen ausschließlich lokal im Browser (`localStorage`, Schlüssel `katzigami-v1`). Sie enthalten Fortschritt, gesammelte Pilze, Checkpoints, Dialogentscheidungen und Audio-Einstellung samt aktiver Katzenverwandlung. Es gibt keine Anmeldung, kein Tracking, keinen Server für Spielstände und keine geräteübergreifende Synchronisierung. Beim Löschen der Browser-Website-Daten geht der Spielstand verloren. GitHub Pages bietet HTTPS; der optionale Service Worker erlaubt nach dem ersten Besuch Offline-Aufrufe des Spiels.
 
 ## GitHub Pages veröffentlichen
 
@@ -25,10 +25,10 @@ Im Repository: `Settings → Pages → Build and deployment → Deploy from a br
 
 ## Entwicklung und Tests
 
-- Reines HTML, CSS und JavaScript; Canvas 2D und Web Audio API.
+- Reines HTML, CSS und JavaScript; Canvas 2D und Web Audio API. Vier originale, generativ synthetisierte Soundtracks mit Spezialpilz-Varianten (Audio nach einer Benutzerinteraktion).
 - Keine Fremd-Game-Engine und kein Mario-Asset. Illustrationen, Level, Dialoge und Sounds werden im Code erzeugt.
 - Statische Syntaxprüfung: `node --check game.js` und `node --check sw.js`.
-- Browser-Regressionstest: `python -m pip install playwright`, `python -m playwright install chromium`, `python tests/run_tests.py`.
+- Browser-Regressionstest: `python -m pip install playwright`, `python -m playwright install chromium`, `python tests/run_tests.py` sowie `python tests/test_power.py`.
 - Der Test nutzt im isolierten Browser ein temporäres `localStorage`-Mock. Die veröffentlichte App verwendet normales Browser-`localStorage`.
 - Der Test behandelt beide wichtigen Story-Routen, sieben Pilze, Gegnerverzweigungen, den Bosskampf, verschiedene Enden, Speicherfunktion, Tastatur und die Touch-Button-Abmessungen für mehrere Displaygrößen.
 
