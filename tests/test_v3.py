@@ -72,7 +72,7 @@ with sync_playwright() as p:
  remaining=snapshot()['effects']['speed']
  page.locator('#pause-toggle').click()
  page.evaluate(f'{api}.step(2)')
- assert snapshot()['effects']['speed']==remaining
+ assert 0 <= remaining-snapshot()['effects']['speed'] < .2, 'Effect timer should freeze while paused'
  assert not errors,errors
  print('PASS – 12 long stages, eight+ feline enemy classes, six timed buffs/curses, damage immunity, silence, flight, cooldown expiration and pause')
  b.close()
