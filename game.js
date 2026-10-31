@@ -325,6 +325,113 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  }
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
  return {...d,index:i,toneVariant,ground,platforms,enemies,routes,tubes,routePlatforms,routeHazards,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+// Bonus routes, collectible coins and a free once-per-house dice reward.
+function takeCoin(coin){
+ if(coin.taken)return;coin.taken=true;const value=COIN_VALUES[coin.type]||1;
+ save.coins+=value;save.coinTaken.push(coin.id);persist();updateUI();
+ if(value>=5){sound('pick');burst(coin.x,coin.y,'#ffdd69',8)}
+}
+function throwDice(house){
+ if(house.used||phase!=='playing')return;
+ house.used=true;save.rolledHouses.push(house.id);persist();
+ const dice=new Uint32Array(1);try{crypto.getRandomValues(dice)}catch{dice[0]=campaignSeed()}
+ const roll=dice[0]%6+1;let reward='';
+ if(roll===1){save.lives=Math.min(99,save.lives+1);reward='Ein zusätzliches Leben! 🐾'}
+ else if(roll===2){save.hearts=Math.min(diff().hearts,save.hearts+2);reward='Zwei Herzen aufgefüllt! 💗'}
+ else if(roll===3){save.coins+=20;reward='20 Goldmünzen! 🪙'}
+ else if(roll===4){const ids=Object.keys(COSTUMES);const id=ids[Math.floor(campaignVar(save.level+save.rolledHouses.length*27)*ids.length)];
+   if(!save.costumes.includes(id))save.costumes.push(id);save.worn=id;reward=COSTUMES[id]+' freigeschaltet!'}
+ else if(roll===5){const ids=Object.keys(SMALL_PERKS);const id=ids[Math.floor(campaignVar(save.level+save.rolledHouses.length*49)*ids.length)];
+   save.perk=id;reward='Kleiner Bonus: '+SMALL_PERKS[id]+'!'}
+ else {save.coins+=5;save.hearts=Math.min(diff().hearts,save.hearts+1);reward='Keksregen! 5 Münzen und ein Herz! 🍪'}
+ sound('win');persist();updateUI();
+ dialog({tag:'DAS WÜRFELHAUS · '+roll+' ⚄',title:'Was für ein Pfotenwurf!',portrait:'🎲 '+hero().icon+' 🏠',body:reward+' Komm später in einem anderen Level wieder – jedes Haus darf einmal würfeln.',options:[{label:'🐾 Ab ins Abenteuer!',action:resume}]})
+}
+function enterHouse(house){
+ if(house.used||phase!=='playing')return;
+ dialog({tag:'DAS GRATIS-WÜRFELHAUS',title:'Haus zum Glückskeks!',portrait:'🏠 🎲 🐭',body:'Eine Zylindermaus ruft: »Ein Wurf pro Haus, ganz ohne Einsatz! Würfel Gewänder, Münzen, zusätzliche Leben oder einen kleinen Spezialbonus.«',options:[{label:'🎲 Würfeln!',action:()=>{phase='playing';throwDice(house)}},{label:'🐾 Vielleicht später',action:()=>{house.cooldown=3;resume()}}]})
+}
+function activateTube(tube){
+ if(player.tubeCooldown>0||player.transit||phase!=='playing')return;
+ const route=level.routes.find(q=>q.id===tube.route);
+ if(!route||tube.direction==='out'&&player.route!==route.id||tube.direction==='in'&&player.route)return;
+ player.transit={tubeId:tube.id,t:0.65,route:route.id,direction:tube.direction};
+ player.vx=0;player.vy=0;player.inv=1.6;
+ sound('meow');burst(tube.x,tube.y,route.kind==='cloud'?'#fff3ba':'#b7a1e3',24);
+ toast(tube.direction==='in'?'🌀 SCHLURP! '+route.label:'💨 PLOPP! Die Abkürzung endet!');
+}
+function updateAdventure(dt){
+ if(player.tubeCooldown>0)player.tubeCooldown=Math.max(0,player.tubeCooldown-dt);
+ if(player.stagger>0)player.stagger=Math.max(0,player.stagger-dt);
+ if(player.transit){
+  player.transit.t-=dt;
+  if(player.transit.t>0)return true;
+  const t=player.transit,route=level.routes.find(q=>q.id===t.route);
+  if(t.direction==='in'){player.x=route.from+135;player.y=route.kind==='cloud'?-522:971;player.route=route.id;camY=route.kind==='cloud'?-690:760}
+  else {player.x=Math.min(level.width-200,route.end+155);player.y=320;player.route=null;camY=0}
+  player.transit=null;player.vx=0;player.vy=0;player.grounded=false;
+  player.tubeCooldown=2.5;player.stagger=1.3;player.inv=1.8;
+  effects.sway=Math.max(effects.sway||0,1.7);
+  return true;
+ }
+ for(const platform of level.routePlatforms){
+  if(!platform.moving)continue;
+  const oldX=platform.x,oldY=platform.y;
+  platform.x=platform.baseX+Math.sin(clock*1.05+platform.phase)*35;
+  platform.y=platform.baseY+Math.cos(clock*1.4+platform.phase)*20;
+  if(player.grounded&&Math.abs(player.y+player.h-oldY)<5&&player.x+player.w>oldX&&player.x<oldX+platform.w){player.x+=platform.x-oldX;player.y+=platform.y-oldY}
+ }
+ for(const tube of level.tubes){
+  if(Math.abs(player.x+player.w*.5-tube.x)<38&&Math.abs(player.y+player.h*.55-tube.y)<76)activateTube(tube);
+ }
+ for(const coin of level.coins){if(!coin.taken&&Math.abs(player.x+player.w/2-coin.x)<(save.perk==='magnet'?83:27)&&Math.abs(player.y+player.h/2-coin.y)<(save.perk==='magnet'?85:30))takeCoin(coin)}
+ for(const house of level.houses){
+  house.cooldown=Math.max(0,house.cooldown-dt);
+  if(!house.used&&!house.cooldown&&!player.route&&Math.abs(player.x+player.w/2-house.x)<37&&Math.abs(player.y+player.h-house.y)<28){enterHouse(house);return true}
+ }
+ if(player.route==='cloud'&&player.y>170){player.route=null;player.tubeCooldown=1.5;toast('☁️ Plumps! Zurück in der Blumenwelt.')}
+ if(player.route==='depth'&&player.x>level.routes[1].end+75){player.route=null}
+ for(const trap of level.routeHazards){if(player.route&&Math.abs(player.x+20-trap.x)<28&&Math.abs(player.y-trap.y)<32)hurt()}
+ camY+=(clamp(player.y-260,-800,960)-camY)*Math.min(1,dt*5.5);
+ return false;
+}
+function drawAdventure(){
+ // Draw in world coordinates after camera translation.
+ for(const q of level.routes){
+  if(q.kind==='cloud'){
+   ctx.save();ctx.fillStyle='#e8f7ff90';ctx.fillRect(q.from-cam,-795,q.end-q.from+230,460);
+   for(let x=q.from+75;x<q.end;x+=210){ctx.font='bold 34px serif';ctx.fillStyle='#fff';ctx.fillText('✦',x-cam,-690+Math.sin(x)*27)}
+   ctx.restore();
+  }else{
+   const x=q.from-cam,w=q.end-q.from+160;
+   ctx.save();round(x,740,w,540,40,q.kind==='cave'?'#483856':'#80624f',q.kind==='cave'?'#b7a0d0':'#c5a27e',6);
+   for(let k=0;k<20;k++){const px=x+(k+.5)*w/20;ctx.fillStyle=q.kind==='cave'?'#e3c6ff':'#ccb288';ctx.beginPath();
+    ctx.moveTo(px-23,752);ctx.lineTo(px,790+((k*19)%70));ctx.lineTo(px+23,752);ctx.fill();
+    if(q.kind==='burrow'){ellipse(px,853+Math.sin(k)*28,18,6,'#cfaf8880')}
+   }ctx.restore();
+  }
+ }
+ for(const p of level.routePlatforms){
+  if(p.moving){const x=p.x-cam;if(x>-180&&x<viewW+180){ctx.save();ctx.globalAlpha=.93;ellipse(x+p.w*.5,p.y+14,p.w*.5,22,'#d3e9ff');ellipse(x+32,p.y+2,40,24,'#fff');ellipse(x+88,p.y-8,51,33,'#fff');ellipse(x+132,p.y+3,33,21,'#fff');ctx.restore()}}
+  else drawGround(p);
+ }
+ for(const tube of level.tubes){
+  const x=tube.x-cam,y=tube.y;if(x<-110||x>viewW+110)continue;
+  ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(clock*2+tube.x)*.13);
+  ctx.lineWidth=30;ctx.lineCap='round';ctx.strokeStyle=tube.route==='cloud'?'#7edcd6':'#cb96c4';ctx.beginPath();ctx.moveTo(0,-55);ctx.bezierCurveTo(-40,-105,50,-105,0,-15);ctx.stroke();
+  ctx.lineWidth=13;ctx.strokeStyle='#fff6dc';ctx.stroke();
+  ellipse(0,-14,30,20,'#785778');ellipse(0,-14,20,11,'#29233f');
+  ctx.font='22px sans-serif';ctx.fillText(tube.direction==='in'?'🌀':'💨',-12,-56);ctx.restore();
+ }
+ for(const coin of level.coins){if(coin.taken)continue;const x=coin.x-cam,y=coin.y+Math.sin(clock*3+coin.x)*5;if(x<-35||x>viewW+35)continue;
+  ctx.save();ctx.translate(x,y);ctx.scale(.65+.35*Math.abs(Math.cos(clock*3+coin.x)),1);
+  const color=coin.type==='gold'?'#ffd75c':coin.type==='silver'?'#d5e7f6':'#ce9877';ellipse(0,0,14,15,color);ctx.strokeStyle='#fff8d9';ctx.lineWidth=3;ctx.stroke();ctx.font='bold 14px sans-serif';ctx.fillStyle='#8c6c69';ctx.textAlign='center';ctx.fillText(coin.type==='gold'?'20':coin.type==='silver'?'5':'1',0,5);ctx.restore()}
+ for(const house of level.houses){const x=house.x-cam;if(x<-100||x>viewW+120)continue;
+  ctx.save();ctx.translate(x,house.y);round(-45,-83,90,82,11,'#fff4d3','#e7b7c3',4);
+  ctx.fillStyle='#de91af';ctx.beginPath();ctx.moveTo(-56,-82);ctx.lineTo(0,-135);ctx.lineTo(56,-82);ctx.closePath();ctx.fill();
+  round(-17,-36,34,36,12,'#a888c4');ctx.font='25px sans-serif';ctx.fillText(house.used?'🐭':'🎲',-14,-94);ctx.restore()}
+ for(const trap of level.routeHazards){const x=trap.x-cam;if(x<-30||x>viewW+30)continue;ctx.fillStyle='#ded0ed';ctx.beginPath();ctx.moveTo(x-20,750);ctx.lineTo(x,840);ctx.lineTo(x+20,750);ctx.fill()}
+}
 function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
  if(i%5!==0){resume();return}
  const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
