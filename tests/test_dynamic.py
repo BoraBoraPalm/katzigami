@@ -13,6 +13,8 @@ with sync_playwright() as p:
  page.set_content(html)
  page.wait_for_timeout(80)
  page.locator('[data-option="0"]').click() # new game
+ page.locator('[data-option="0"]').click() # choose cat
+ page.locator('[data-option="1"]').click() # medium
  page.locator('[data-option="0"]').click() # prologue
  # Teleport to the first NPC and trigger free-text dialogue.
  page.evaluate('window.__katzigamiTest.position(252,390)')
@@ -42,7 +44,7 @@ with sync_playwright() as p:
  assert len(set(mysteries))>=3, 'Mystery variations insufficient'
  assert len(set(foes))>=4, 'Enemy composition not varying'
  # Combat strength still scales, and multiple enemy classes survive one weak hit.
- page.evaluate('window.__katzigamiTest.enterLevel(3)')
+ page.evaluate('window.__katzigamiTest.enterLevel(5)')
  armored=next(x for x in page.evaluate('window.__katzigamiTest.snapshot().enemies') if x['type'] in ('armored','titan'))
  page.evaluate('id=>window.__katzigamiTest.damageEnemy(id,1)',armored['id'])
  after=next(x for x in page.evaluate('window.__katzigamiTest.snapshot().enemies') if x['id']==armored['id'])
