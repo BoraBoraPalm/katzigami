@@ -1144,12 +1144,41 @@ function drawCoin(coin){
  ctx.save();ctx.shadowColor=c[0];ctx.shadowBlur=8;ellipse(x,y,13*face,14,c[1]);ellipse(x,y,10*face,11,c[0]);ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillStyle=c[1];ctx.fillText(coin.type==='gold'?'20':coin.type==='silver'?'5':'1',x,y+4);ctx.restore();
 }
 function drawHouses(){
- for(const h of level.houses){if(h.x<cam-105||h.x>cam+viewW+110)continue;const x=h.x-cam;
- ctx.save();round(x-43,360,86,89,14,'#fff1d9','#b785aa',3);
- ctx.beginPath();ctx.moveTo(x-53,360);ctx.lineTo(x,314);ctx.lineTo(x+53,360);ctx.closePath();ctx.fillStyle=h.used?'#beaec3':'#f0a2c4';ctx.fill();ctx.strokeStyle='#fff8e5';ctx.lineWidth=4;ctx.stroke();
- round(x-15,393,30,56,8,'#ad7cb1','#fff7e2',2);
- ctx.font='25px sans-serif';ctx.textAlign='center';ctx.fillText(h.used?'🔒':'🎲',x,360);ctx.font='bold 13px sans-serif';ctx.fillStyle='#633e73';ctx.fillText(h.used?'BESUCHT':'10 🪙',x,385);
- ctx.restore();}
+ const act=actOf(level.index);
+ const palette=[
+  ['#ffefdc','#b77d9f','#f6accb','#fff3c2'],
+  ['#d4e5c8','#507c75','#a0cfab','#f7ecc0'],
+  ['#e3d5fa','#936cab','#d3a5df','#fff2d7'],
+  ['#c1b5d4','#685477','#dbaeb4','#f8d9a7']
+ ][act];
+ for(const h of level.houses){
+  if(h.x<cam-112||h.x>cam+viewW+112)continue;
+  const x=h.x-cam,light=.6+.4*Math.sin(clock*2+h.x);
+  ctx.save();ctx.translate(x,0);
+  ctx.shadowColor=palette[2];ctx.shadowBlur=h.used?3:10;
+  round(-45,355,90,95,13,palette[0],palette[1],4);ctx.shadowBlur=0;
+  // Each shop has a silhouette matched to the surrounding world.
+  ctx.beginPath();ctx.moveTo(-54,359);ctx.quadraticCurveTo(-6,307,0,305);ctx.quadraticCurveTo(6,304,54,359);ctx.closePath();
+  ctx.fillStyle=palette[1];ctx.fill();ctx.strokeStyle='#fff5db';ctx.lineWidth=4;ctx.stroke();
+  if(act===1){for(let i=-2;i<=2;i++)ellipse(i*15,333,20,13,palette[2])}
+  if(act===2){ellipse(0,316,32,13,'#f9e7ff');ellipse(0,316,21,8,palette[2])}
+  if(act===3){for(let side of [-1,1]){line(side*39,348,side*39,320,palette[3],5);ellipse(side*39,320,6,6,palette[3])}}
+  round(-20,387,40,62,15,palette[1],palette[3],3);
+  round(-28,369,20,15,4,palette[3]);round(10,369,20,15,4,palette[3]);
+  ellipse(-23,376,4,4,'#fff5cf');ellipse(17,376,4,4,'#fff5cf');
+  ctx.textAlign='center';ctx.font='bold 27px Georgia,serif';ctx.fillStyle=h.used?'#bbb0b8':palette[3];
+  ctx.fillText(h.used?'⌁':'⚄',0,354);
+  // Animated mouse shopkeeper peeks through the upper window.
+  if(!h.used){const peek=Math.max(0,Math.sin(clock*1.8+h.x)*9);
+   ellipse(-8,337-peek,8,9,'#cdb3a8');ellipse(8,337-peek,8,9,'#cdb3a8');
+   ellipse(0,340-peek,12,12,'#ead1ba');ellipse(-5,339-peek,2.3,3,'#5e5365');ellipse(5,339-peek,2.3,3,'#5e5365');
+  }
+  round(-35,452,70,22,8,h.used?'#9b90ab':palette[3],palette[1],2);
+  ctx.font='bold 12px Nunito,sans-serif';ctx.fillStyle='#684b70';
+  ctx.fillText(h.used?'BESUCHT':'10 MÜNZEN',0,468);
+  for(let k=0;k<3;k++){ellipse(-31+k*28,356,3,3,'#fff5d4');}
+  ctx.restore();
+ }
 }
 function drawTube(tube){
  const x=tube.x-cam,y=tube.y;if(x<-110||x>viewW+110)return;
