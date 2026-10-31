@@ -268,7 +268,7 @@ function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABE
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Durchquere zwölf lange Level in vier Retro-Anime-Welten. Sammle sieben Orakelpilze und besiege unterschiedliche Katzengegner mit mehreren Lebenspunkten. Helle Bonus-Items verleihen zeitweise Turbo, Unverwundbarkeit oder Flugfähigkeit (zum Fliegen Sprungtaste gedrückt halten). Dunkle, durchgestrichene Items verursachen Flüche: Bildschirm-Schwanken, Schneckentempo oder Magiesperre. Die Restzeit steht über Momos Kopf. Du kannst gefährliche Items überspringen. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=clamp(save.hearts,1,diff().hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0,route:null,tubeCooldown:0,dizzy:0,hatTick:0,riding:null};shots=[];enemyShots=[];particles=[];effects={};transport=null;specialCooldown=0;powerFlash=0;resetMusic();cam=0;camY=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const routes=[
  {id:'cloud',label:'Wolkenparcours',from:900,end:2090,y:-555,kind:'cloud',bonus:200},
@@ -292,6 +292,11 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  for(let x=260,j=0;x<d.width-140;x+=185,j++)addCoin(x,j%3===0?346:400,j%8===0?'gold':j%3===0?'silver':'bronze','main-'+j);
  for(const route of routes){for(let x=route.from+175,j=0;x<route.end;x+=156,j++)addCoin(x,route.kind==='cloud'?-535:967,j%5===0?'gold':'silver',route.id+'-'+j)}
  const houses=[{id:'house-'+i+'-a',x:650,y:450},{id:'house-'+i+'-b',x:d.width-420,y:450}].map(h=>({...h,used:save.rolledHouses.includes(h.id),cooldown:0}));
+ // Rare rideable helpers: landing on a bird takes timing; the cave snail crawls
+ // around a wall and across the ceiling. Neither costs a life on a missed attempt.
+ const mounts=[];
+ if(i%2===0)mounts.push({id:'bird-'+i,kind:'bird',route:'cloud',from:routes[0].from+290,to:routes[0].end-140,x:routes[0].from+290,y:-584,phase:i*.81,rideTime:6,rest:0});
+ if(i%3===0||i%5===4)mounts.push({id:'snail-'+i,kind:'snail',route:'depth',from:routes[1].from+315,to:routes[1].end-190,x:routes[1].from+315,y:945,phase:i*.51,rideTime:8,rest:0,angle:0});
  const routeHazards=routes.filter(q=>q.kind==='cave').flatMap(q=>Array.from({length:6},(_,j)=>({x:q.from+230+j*180,y:830,type:'stalactite'})));
 
  const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type],hp=Math.max(1,Math.ceil(t.hp*diff().enemyHp));return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp,maxHp:hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
@@ -325,7 +330,7 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
   }
  }
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,routes,tubes,routePlatforms,routeHazards,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 // Bonus routes, collectible coins and a free once-per-house dice reward.
 function takeCoin(coin){
  if(coin.taken)return;coin.taken=true;const value=COIN_VALUES[coin.type]||1;
@@ -584,7 +589,7 @@ function gameOver(reason='Alle Leben aufgebraucht!'){
 function loseLife(reason){
  save.deaths++;save.lives=Math.max(0,save.lives-1);
  if(save.lives===0){gameOver(reason);return}
- save.hearts=diff().hearts;player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;camY=0;effects={};persist();updateUI();toast('🐾 Ein Leben verloren! Noch '+save.lives+' übrig.');
+ save.hearts=diff().hearts;player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;player.riding=null;camY=0;effects={};persist();updateUI();toast('🐾 Ein Leben verloren! Noch '+save.lives+' übrig.');
 }
 function hurt(){
  if(player.inv>0||effects.invincible>0||phase!=='playing')return;
@@ -594,7 +599,77 @@ function hurt(){
  persist();
 }
 function jump(){if(phase!=='playing')return;queuedJump=.16}
+function mountPosition(m,t){
+ const span=Math.max(230,m.to-m.from);
+ if(m.kind==='bird'){
+   const u=(t*.16+m.phase)%1;
+   const ping=u<.5?u*2:(1-u)*2;
+   m.x=m.from+span*ping;
+   m.y=-583+Math.sin(t*3.5+m.phase)*17;
+   m.angle=Math.sin(t*3.5+m.phase)*.1;
+ }else{
+   // Crawl right up a cavern wall, cross the ceiling upside down, then descend.
+   const u=((t*.085+m.phase)%1+1)%1;
+   const left=m.from,right=m.to;
+   if(u<.24){m.x=left;m.y=934-(u/.24)*220;m.angle=-Math.PI*.5}
+   else if(u<.72){m.x=left+(u-.24)/.48*(right-left);m.y=714;m.angle=Math.PI}
+   else {m.x=right;m.y=714+(u-.72)/.28*220;m.angle=Math.PI*.5}
+ }
+}
+function startRide(m){
+ if(player.riding||m.rest>0||transport||phase!=='playing'||player.route!==m.route)return false;
+ player.riding={id:m.id,left:m.rideTime};
+ player.grounded=false;player.vx=0;player.vy=0;player.inv=1.2;queuedJump=0;
+ burst(m.x,m.y,m.kind==='bird'?'#d3f6ff':'#f1d4aa',24);sound('transform');
+ toast(m.kind==='bird'?'🐦 JIPPI! Auf dem Wolkenvogel!':'🐌 WAHNSINN! Wand-Schnecke, sogar kopfüber!');
+ return true;
+}
+function updateRiding(dt){
+ const ride=player.riding;if(!ride)return false;
+ const m=level.mounts.find(v=>v.id===ride.id);
+ if(!m){player.riding=null;return false}
+ ride.left=Math.max(0,ride.left-dt);
+ player.x=clamp(m.x-player.w*.5,0,level.width-player.w);
+ player.y=m.y-(m.kind==='bird'?65:70);
+ player.vx=0;player.vy=0;player.inv=Math.max(player.inv,.35);player.grounded=false;
+ if(queuedJump>0||ride.left<=0){
+  player.riding=null;m.rest=4;queuedJump=0;
+  player.vy=ride.left>0?-565:-140;
+  player.vx=m.kind==='bird'?player.facing*170:player.facing*120;
+  player.inv=.85;player.tubeCooldown=Math.max(player.tubeCooldown,1);
+  sound('jump');toast('🎠 Absprung! Huiii!');
+  return true;
+ }
+ cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*6);
+ camY+=(clamp(player.y-330,-850,865)-camY)*Math.min(1,dt*7);
+ return true;
+}
+function drawMount(m){
+ const x=m.x-cam,y=m.y;
+ if(x<-100||x>viewW+100)return;
+ ctx.save();ctx.translate(x,y);ctx.rotate(m.angle||0);
+ if(m.kind==='bird'){
+  ellipse(-7,2,31,22,'#f3e5ff');ellipse(18,-13,18,21,'#f7f3ff');
+  for(const side of [-1,1]){ctx.save();ctx.translate(side*14,-6);ctx.rotate(side*Math.sin(clock*17)*.28);
+   ellipse(side*21,3,32,12,'#b5e7ed',side*.24);ctx.restore()}
+  ctx.fillStyle='#f5ae67';ctx.beginPath();ctx.moveTo(32,-12);ctx.lineTo(49,-8);ctx.lineTo(32,-3);ctx.fill();
+  ellipse(23,-18,4,5,'#39344c');ellipse(-17,12,5,3,'#e59aca');
+ }else{
+  // Body and golden spiral shell rotate with the surface; rider stays upright.
+  ellipse(-17,5,43,16,'#e0d9a0');ellipse(17,-2,19,18,'#cbd6a6');
+  ellipse(-10,-11,25,28,'#e8a9c5');ctx.strokeStyle='#fff4d2';ctx.lineWidth=5;
+  ctx.beginPath();ctx.arc(-11,-11,15,0,Math.PI*1.8);ctx.stroke();
+  ctx.beginPath();ctx.arc(-11,-11,6,0,Math.PI*1.6);ctx.stroke();
+  for(const q of [-1,1]){line(20+q*7,-7,23+q*9,-31,'#9ac49d',4);ellipse(23+q*9,-31,5,6,'#f7ecff')}
+  ctx.fillStyle='#f5f0ff';ctx.font='17px sans-serif';ctx.fillText('✦',-9,-10);
+ }
+ ctx.restore();
+ if(player.riding?.id===m.id){ctx.save();ctx.font='bold 13px Nunito,sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
+}
 function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
+ for(const mount of level.mounts){mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
+ if(updateRiding(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
  if(transport){tubeTick(dt);camY+=(clamp(player.y-330,-860,870)-camY)*Math.min(1,dt*8);cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*6);return}
  player.tubeCooldown=Math.max(0,player.tubeCooldown-dt);
@@ -614,6 +689,7 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
  if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=save.perk==='bounce'?-750:-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
  if(!vxInput.jump&&player.vy<-280)player.vy+=save.perk==='glide'?1350*dt:1850*dt;
  const previousBottom=player.y+player.h;
+ const priorVy=player.vy;
  player.vy=Math.min(1100,player.vy+(save.perk==='glide'?1500:1780)*dt);
  if(effects.fly>0&&vxInput.jump){player.vy=-280;player.grounded=false;coyote=0;queuedJump=0}
  if(effects.fly>0)player.y=Math.max(48,player.y);
@@ -624,6 +700,14 @@ function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
  if(previousBottom<=platform.y+10&&player.y+player.h>=platform.y){if(!landing||platform.y<landing.y)landing=platform}
  }}
  if(landing){player.y=landing.y-player.h;player.vy=0;if(!player.grounded)player.landed=true;player.grounded=true;coyote=.11}else{if(player.grounded)coyote=.11;player.grounded=false}
+ // Precision landing: only a controlled descent from above earns a ride.
+ for(const m of level.mounts){if(m.rest>0||player.riding||player.route!==m.route||priorVy<115)continue;
+  const center=player.x+player.w/2,foot=player.y+player.h;
+  const upper=m.y-(m.kind==='bird'?23:32);
+  if(Math.abs(center-m.x)<(m.kind==='bird'?25:21)&&previousBottom<=upper+7&&foot>=upper-4&&foot<=upper+45){
+   if(startRide(m))return;
+  }
+ }
  if(player.y>1400){enemyShots=[];shots=[];sound('hurt');save.hearts=Math.max(0,save.hearts-1);
  if(save.hearts<=0)loseLife('Ein sehr, sehr tiefer Plumps!');else{player.x=save.checkpoint||78;player.y=320;player.vx=0;player.vy=0;player.inv=2;player.route=null;camY=0;persist();updateUI();toast('Plumps! '+hero().name+' landet auf der Würde!')}}
 
@@ -938,6 +1022,7 @@ function drawWorld(){if(!level)return;ctx.save();ctx.setTransform(canvas.width/v
  for(const item of level.items)drawMushroom(item);drawPowerMushroom(level.powerItem);for(const charm of level.charms)drawCharm(charm);for(const coin of level.coins)drawCoin(coin);drawHouses();for(const tube of level.tubes)drawTube(tube);
  level.npcs.forEach(drawNPC);
  for(const e of level.enemies)drawEnemy(e);
+ for(const m of level.mounts)drawMount(m);
  drawGate();
  if(isFinal(level.index)&&boss&&!boss.done&&boss.triggered){const x=boss.x+Math.sin(clock*1.3)*60-cam;drawCat(x+13,432,1.17,'shadow',Math.sin(clock*3)*2,-1);if(boss.active){ctx.font='25px Nunito';ctx.fillStyle='#fff';ctx.fillText('👑 SPIEGEL-MOMO',x-30,323);round(x-33,340,108,10,5,'#463353');round(x-31,342,104*boss.hp/boss.maxHp,6,3,'#fb98b5')}}
  if(player&&(player.inv<=0||Math.floor(clock*14)%2===0)){const run=player.grounded&&Math.abs(player.vx)>30;const bob=run?Math.abs(Math.sin(player.runCycle))*4:Math.sin(clock*3)*1.5;drawHero(player.x+player.w/2-cam,player.y+player.h*.54,bob)}
@@ -964,7 +1049,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   chat:(text,name='Pip')=>applyConversation(name,text),
   engage:()=>talkWithCat(),
   relations:()=>({...save.relations}),
-  snapshot:()=>({phase,level:save.level,width:level.width,act:actOf(save.level),stage:level.stage,effects:{...effects},charms:level.charms.map(c=>({id:c.id,kind:c.kind,x:c.x,y:c.y,taken:c.taken})),player:player&&{x:player.x,y:player.y,vx:player.vx,vy:player.vy,grounded:player.grounded},collected:[...save.collected],power:save.power,shots:shots.length,hearts:save.hearts,checkpoint:save.checkpoint,flags:{...save.flags},shown:[...save.shown],boss:boss&&{...boss},ending:save.ending,winner:save.won,enemies:level.enemies.map(e=>({id:e.id,type:e.type,x:e.x,y:e.y,hp:e.hp,maxHp:e.maxHp,dead:e.dead})),enemyShots:enemyShots.length}),
+  snapshot:()=>({phase,level:save.level,width:level.width,act:actOf(save.level),stage:level.stage,mounts:level.mounts.map(m=>({id:m.id,kind:m.kind,x:m.x,y:m.y,angle:m.angle,rest:m.rest})),ride:player?.riding?{...player.riding}:null,effects:{...effects},charms:level.charms.map(c=>({id:c.id,kind:c.kind,x:c.x,y:c.y,taken:c.taken})),player:player&&{x:player.x,y:player.y,vx:player.vx,vy:player.vy,grounded:player.grounded},collected:[...save.collected],power:save.power,shots:shots.length,hearts:save.hearts,checkpoint:save.checkpoint,flags:{...save.flags},shown:[...save.shown],boss:boss&&{...boss},ending:save.ending,winner:save.won,enemies:level.enemies.map(e=>({id:e.id,type:e.type,x:e.x,y:e.y,hp:e.hp,maxHp:e.maxHp,dead:e.dead})),enemyShots:enemyShots.length}),
   position:(x,y=390)=>{player.x=x;player.y=y;player.vy=0;player.vx=0;player.inv=2},
   collectAll:()=>{for(const item of level.items)collect(item)},
   takePower:()=>transform(level.powerItem),cast:()=>castSpecial(),hurt:()=>{player.inv=0;hurt()},
@@ -978,6 +1063,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   isolateEnemy:(id,x=540)=>{const e=level.enemies.find(e=>e.id===id);if(!e)return false;for(const other of level.enemies)if(other!==e)other.dead=true;e.base=x;e.x=x;e.range=0;e.y=411;e.hp=1;e.maxHp=1;e.inv=0;return true},
   damageEnemy:(id,damage=1)=>{const e=level.enemies.find(e=>e.id===id);return e?hitEnemy(e,damage,e.x,e.y):false},
   damageBoss:(damage=1)=>hitBoss(damage,boss.x,boss.y),
+  mount:(kind)=>{const m=level.mounts.find(x=>x.kind===kind);if(!m)return false;player.route=m.route;player.x=m.x-player.w/2;player.y=m.y-100;return startRide(m)},
   giveCharm:(kind)=>{if(!CHARMS[kind])return false;takeCharm({kind,x:player.x+20,y:player.y+20,taken:false});return true},
   givePower:(name)=>{if(!POWERS[name])return false;transform({id:name,x:player.x+20,y:player.y+20,taken:false});return true},
   clearSave:()=>localStorage.removeItem(SAVE_KEY)
