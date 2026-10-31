@@ -292,7 +292,7 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  const addCoin=(x,y,type,id)=>newCoins.push({id:'coin-'+i+'-'+id,x,y,type,taken:save.coinTaken.includes('coin-'+i+'-'+id)});
  for(let x=260,j=0;x<d.width-140;x+=185,j++)addCoin(x,j%3===0?346:400,j%8===0?'gold':j%3===0?'silver':'bronze','main-'+j);
  for(const route of routes){for(let x=route.from+175,j=0;x<route.end;x+=156,j++)addCoin(x,route.kind==='cloud'?-535:967,j%5===0?'gold':'silver',route.id+'-'+j)}
- const houses=[{id:'house-'+i+'-a',x:650,y:450},{id:'house-'+i+'-b',x:isFinal(i)?d.width-850:d.width-420,y:450}].map(h=>({...h,used:save.rolledHouses.includes(h.id),cooldown:0}));
+ const houses=[{id:'house-'+i+'-a',x:650,y:450},{id:'house-'+i+'-b',x:isFinal(i)?d.width-630:d.width-420,y:450}].map(h=>({...h,used:save.rolledHouses.includes(h.id),cooldown:0}));
  // Rare rideable helpers: landing on a bird takes timing; the cave snail crawls
  // around a wall and across the ceiling. Neither costs a life on a missed attempt.
  const mounts=[];
