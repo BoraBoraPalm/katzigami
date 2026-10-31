@@ -672,7 +672,7 @@ function drawMount(m){
   ctx.fillStyle='#fff5dc';ctx.fillText('⏳ '+player.riding.left.toFixed(1)+'s',x,y-87);ctx.restore()}
 }
 function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
- for(const mount of level.mounts){mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
+ for(const mount of level.mounts){if(mount.testFreeze>0)mount.testFreeze=Math.max(0,mount.testFreeze-dt);else mountPosition(mount,clock);mount.rest=Math.max(0,mount.rest-dt)}
  if(updateRiding(dt))return;
  if(save.outfit==='mouse'){player.hatTick+=dt;if(player.hatTick>14){player.hatTick=0;save.coins++;persist();updateUI();burst(player.x+20,player.y-18,'#ffe27a',12);sound('pick');toast('🎩 Die Hutmaus wirft eine Münze! *Kicher!*')}}
  if(transport){tubeTick(dt);camY+=(clamp(player.y-330,-860,870)-camY)*Math.min(1,dt*8);cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*6);return}
@@ -1074,7 +1074,7 @@ function setup(){bindControl('left','left');bindControl('right','right');bindCon
   damageBoss:(damage=1)=>hitBoss(damage,boss.x,boss.y),
   mount:(kind)=>{const m=level.mounts.find(x=>x.kind===kind);if(!m)return false;player.route=m.route;player.x=m.x-player.w/2;player.y=m.y-100;return startRide(m)},
   precisionLanding:(kind)=>{const m=level.mounts.find(x=>x.kind===kind);if(!m)return false;
-   player.route=m.route;player.riding=null;player.tubeCooldown=3;player.x=m.x-player.w/2+(kind==='bird'?39:0);player.y=m.y-130;player.vy=300;player.vx=0;player.grounded=false;player.inv=3;return true},
+   player.route=m.route;player.riding=null;player.tubeCooldown=3;m.testFreeze=.36;player.x=m.x-player.w/2;player.y=m.y-130;player.vy=300;player.vx=0;player.grounded=false;player.inv=3;return true},
   giveCharm:(kind)=>{if(!CHARMS[kind])return false;takeCharm({kind,x:player.x+20,y:player.y+20,taken:false});return true},
   givePower:(name)=>{if(!POWERS[name])return false;transform({id:name,x:player.x+20,y:player.y+20,taken:false});return true},
   clearSave:()=>localStorage.removeItem(SAVE_KEY)
