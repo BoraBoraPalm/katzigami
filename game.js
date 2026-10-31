@@ -257,8 +257,8 @@ const FRIEND_SCHEDULE=['Pip','Yuki','Miso','Yuki','Pip','Miso','Yuki','Tavi','Pi
 const INJURY_LEVELS={6:'Yuki',12:'Miso',17:'Tavi'};
 const HEAL_COST=150;
 function friendState(name){if(!save.friends)save.friends={};return save.friends[name]||(save.friends[name]={trust:0,healed:false,injured:false,meetings:0,secrets:0})}
-const defaultSave=()=>({version:1,campaignV3:true,campaignV4:true,character:'cat',difficulty:'medium',lives:5,coins:0,coinTaken:[],rolledHouses:[],costumes:[],perk:null,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0,friends:{},friendEncounters:[]});
-function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV4?raw.level:(raw.campaignV3?Math.floor(raw.level/3)*5+raw.level%3:raw.level*5))),campaignV3:true,campaignV4:true,
+const defaultSave=()=>({dialogueSeen:[],dialogueRepliesSeen:[],version:1,campaignV3:true,campaignV4:true,character:'cat',difficulty:'medium',lives:5,coins:0,coinTaken:[],rolledHouses:[],costumes:[],perk:null,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0,friends:{},friendEncounters:[]});
+function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],dialogueSeen:Array.isArray(raw.dialogueSeen)?raw.dialogueSeen.filter(v=>typeof v==='string').slice(-300):[],dialogueRepliesSeen:Array.isArray(raw.dialogueRepliesSeen)?raw.dialogueRepliesSeen.filter(v=>typeof v==='string').slice(-150):[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV4?raw.level:(raw.campaignV3?Math.floor(raw.level/3)*5+raw.level%3:raw.level*5))),campaignV3:true,campaignV4:true,
  character:Object.hasOwn(HEROES,raw.character)?raw.character:'cat',difficulty:Object.hasOwn(DIFFICULTY,raw.difficulty)?raw.difficulty:'medium',
  lives:Number.isInteger(raw.lives)?clamp(raw.lives,0,99):5,coins:Number.isInteger(raw.coins)?clamp(raw.coins,0,999999):0,
  coinTaken:Array.isArray(raw.coinTaken)?raw.coinTaken:[],rolledHouses:Array.isArray(raw.rolledHouses)?raw.rolledHouses:[],costumes:Array.isArray(raw.costumes)?raw.costumes.filter(x=>Object.hasOwn(COSTUMES,x)):[],perk:Object.hasOwn(SMALL_PERKS,raw.perk)?raw.perk:null,
@@ -538,20 +538,184 @@ function applyConversation(name,answer){
  const phrase=REACTIONS[intent][Math.floor(campaignVar(save.encounters*13+name.length)*REACTIONS[intent].length)];
  return {intent,relation,reply:name+' ('+mood+'): »'+phrase+'«',effect:ally?'Verbündete bauen eine Abkürzung!':hostile?'Eine Schattenpatrouille ist misstrauisch geworden.':'Deine Antwort wird den weiteren Weg verändern.'};
 }
+// Dialogue deck: individually authored encounters, not repeated three-button templates.
+// Each tuple is [title, situation, caring choice, inquisitive choice, bold choice].
+const WORLD_DIALOGUES={
+ castle:[
+ ['Die beleidigte Ahnengalerie','Ein adliges Porträt schnaubt: »In MEINEM Schloss rennt man nicht!« Dann blinzelt der gemalte Kater. Was nun?','💗 Dem Porträt höflich Mut zusprechen','🔍 Fragen, wer das Bild verzaubert hat','⚔️ Die angedrohte Strafe herausfordern'],
+ ['Die Tür ohne Zimmer','Pip zieht an einer Tür. Dahinter ist nur ein Sternenhimmel und ein einzelner Hausschuh. »War das gestern schon so?«','💗 Den verirrten Schuhbesitzer suchen','🔍 Die Türscharniere untersuchen','⚔️ Mutig durch den Sternenhimmel treten'],
+ ['Mitternachtsdienst','Ein Wachgeist bittet um fünf Minuten Pause. »Seit 300 Jahren habe ich keine Kaffeepause!«','💗 Seine Geisterschicht übernehmen','🔍 Fragen, wer den Dienstplan schreibt','⚔️ Den Dienstplan vom Uhrmeister fordern'],
+ ['Die krumme Krone','Eine staubige Krone hängt am Türgriff. Sie flüstert: »König werden ist leichter als König bleiben.«','💗 Die Krone ihrem Besitzer zurückbringen','🔍 Nach dem verschwundenen König fragen','⚔️ Der Krone widersprechen und vorangehen'],
+ ['Nervöse Fledermaus','Eine Fledermaus trägt eine winzige Brille. »Ich habe Angst vor Höhen«, beichtet sie von der Decke.','💗 Die Fledermaus sicher herunterhelfen','🔍 Herausfinden, warum sie dort festhängt','⚔️ Den fallenden Kronleuchter ablenken'],
+ ['Die Tanzkarte','Im leeren Ballsaal schwebt eine Tanzkarte mit deinem Namen. Auf der Rückseite: »Letzter Tanz vor dem Morgen.«','💗 Einen einsamen Geist zum Tanzen einladen','🔍 Die Handschrift auf der Karte prüfen','⚔️ Die Geistermusik stoppen'],
+ ['Der falsche Butler','Ein Butler behauptet, sein Herr sei eine Zimmerpflanze. Die Pflanze nickt viel zu schnell.','💗 Der verschreckten Pflanze helfen','🔍 Die Maskerade des Butlers entlarven','⚔️ Die verzauberte Tür bewachen'],
+ ['Schlüssel aus Marzipan','Ein riesiger Schlüssel riecht nach Marzipan. »Bitte nicht anknabbern«, mahnt seine winzige Stimme.','💗 Den Schlüssel vor hungrigen Geistern schützen','🔍 Prüfen, welche Tür er öffnen kann','⚔️ Die nächste Tür damit aufstoßen'],
+ ['Fünf vor Mitternacht','Eine Taschenuhr tickt rückwärts, während jemand im Kerker »Hilfe!« ruft. Pip wird kreidebleich.','💗 Sofort dem Hilferuf folgen','🔍 Die rückwärts laufende Uhr untersuchen','⚔️ Den Kerkerwächter zur Rede stellen'],
+ ['Der unsterbliche Hauskater','Ein Geisterkater erklärt: »Neun Leben? Lächerlich. Ich habe siebzehn Rechnungen offen!«','💗 Ihm bei einer alten Entschuldigung helfen','🔍 Nach seiner Verbindung zu Nox fragen','⚔️ Die Geisterrechnung persönlich begleichen'],
+ ['Das Bild fällt gleich','Eine steife Adelskatze im Bild ruft: »Haltung!« Gleichzeitig knackt der Rahmen verdächtig.','💗 Die Katze neben dem Bild warnen','🔍 Den schadhaften Rahmen untersuchen','⚔️ Das Gemälde im letzten Moment auffangen'],
+ ['Das Zimmer des Uhrmeisters','Hinter rotem Samt steht ein Kinderstuhl vor Nox’ gigantischer Uhr. Niemand erklärt, warum.','💗 Nach dem vermissten Kind fragen','🔍 Die Spuren am kleinen Stuhl lesen','⚔️ Nox’ verbotene Kammer öffnen']
+ ],
+ snow:[
+ ['Der letzte warme Fisch','In einem Iglu kauert ein Eisbärenjunges über einem einzigen warmen Fisch. »Der ist für Oma«, flüstert es.','💗 Oma im Schneesturm suchen','🔍 Nach dem verschwundenen Fischfang fragen','⚔️ Die hungrigen Schneewächter vertreiben'],
+ ['Der singende Schneemann','Ein Schneemann singt Oper, sobald der Sturm aufheult. Er behauptet, die Melodie halte das Eis zusammen.','💗 Den frierenden Sänger begleiten','🔍 Die geheimnisvolle Melodie entschlüsseln','⚔️ Dem Sturm entgegensingen'],
+ ['Spuren auf dünnem Eis','Zwei Pfotenspuren führen über das Eis, aber keine zurück. Yuki sagt: »Jemand ist darunter.«','💗 Die vermisste Pfote retten','🔍 Den Verlauf der Eisspalte prüfen','⚔️ Einen mutigen Sprung hinüber wagen'],
+ ['Iglu Nummer dreizehn','Ein Iglu erscheint nur, wenn es schneit. Drinnen kocht jemand Kakao auf einer Uhr.','💗 Eine Tasse für die Verirrten mitnehmen','🔍 Das wandernde Iglu untersuchen','⚔️ Den verdächtigen Eisbär herausfordern'],
+ ['Ein Bär mit Schal','Ein Eisbär trägt sieben bunte Schals. »Keiner ist meiner«, knurrt er. »Sie gehören den Verschwundenen.«','💗 Gemeinsam nach den Besitzern suchen','🔍 Nach der Herkunft der Schals fragen','⚔️ Die Schnee-Patrouille stellen'],
+ ['Die eingefrorene Glocke','Tief unter dem Eis schlägt eine Glocke, doch niemand hört sie. Nur dein Pilz vibriert.','💗 Den anderen den Weg zur Glocke zeigen','🔍 Die Resonanz unter dem Eis messen','⚔️ Die Eiskruste aufbrechen'],
+ ['Der beleidigte Sturm','Eine Schneeflocke ruft: »Wir sind kein schlechtes Wetter. Wir sind ein Chor!«','💗 Dem Flockenchor zuhören','🔍 Fragen, wer den Wind dirigiert','⚔️ Den Wind mit eigener Melodie übertönen'],
+ ['Eisfisch und Geheimnis','Ein Fisch blickt durch die Eisschicht hoch: »Euer Himmel sieht aus wie unser Boden!«','💗 Den Fisch aus der Falle befreien','🔍 Nach dem Eingang zur Unterwasserhöhle fragen','⚔️ Den Eisdeckel entschlossen sprengen'],
+ ['Die kaputte Wetterfahne','Auf einer Hütte dreht eine Wetterfahne gegen den Wind. »Jemand hat Norden gestohlen!«','💗 Die Bewohner sicher zurückführen','🔍 Die falsche Nordrichtung überprüfen','⚔️ Den Schneewächtern den Weg versperren'],
+ ['Der viel zu stolze Schlitten','Ein verzauberter Schlitten will nur bergauf fahren. »Bergab kann jeder!«, verkündet er.','💗 Dem Schlitten eine Pause gönnen','🔍 Nach seinem seltsamen Antrieb fragen','⚔️ Den Schlitten zu einem Rennen fordern'],
+ ['Die warme Höhlenwand','Hinter einem Wasserfall aus Eis pulsiert warme Luft. Yuki sieht einen kleinen Schatten.','💗 Den Schatten behutsam ansprechen','🔍 Die verborgene Eishöhle erkunden','⚔️ Dem Eiswächter die Stirn bieten'],
+ ['Mützenalarm','Ein Schneehase trägt einen Hut aus sechs Mützen. Die siebte wurde ihm gestohlen.','💗 Gemeinsam die letzte Mütze suchen','🔍 Wer braucht sieben Mützen?','⚔️ Den Mützendieb einholen']
+ ],
+ jungle:[
+ ['Die Bananenrepublik','Ein Affe erklärt sich zum Bananenminister. »Jede Banane braucht einen Ausweis!« Eine fällt dir fast auf den Kopf.','💗 Den hungrigen Affenjungen helfen','🔍 Den seltsamen Bananenplan untersuchen','⚔️ Den Minister von der Liane holen'],
+ ['Der Lianen-Test','Eine Liane schwingt ohne Wind. Eine Stimme flüstert: »Nicht die Kraft entscheidet. Der richtige Moment.«','💗 Einen zögernden Freund hinüberbegleiten','🔍 Den Rhythmus der Liane beobachten','⚔️ Mit Schwung zur anderen Seite fliegen'],
+ ['Die Piranha-Schule','Unter der Brücke üben Piranhas gefährliche Gesangsstücke. »Wir sind Vegetarier!«, behauptet der Dirigent.','💗 Nach einem sicheren Ufer suchen','🔍 Den Speiseplan der Fische prüfen','⚔️ Den Piranhas die Zähne zeigen'],
+ ['Baum mit Geheimfach','In einem hohlen Baum steckt ein Brief von Dahlia. Doch ein Affe möchte ihn gegen eine Banane tauschen.','💗 Die Banane mit dem Affen teilen','🔍 Den königlichen Brief untersuchen','⚔️ Den Brief vor den Räubern sichern'],
+ ['Der seltsame Regen','Es regnet nur auf einen einzigen Busch. Der Busch ruft: »Endlich!«','💗 Den durstigen Busch schützen','🔍 Die Ursache des Mini-Regens suchen','⚔️ Den Wolkendieb aufhalten'],
+ ['Die Brücke aus Ameisen','Tausend Ameisen bilden eine wacklige Brücke. Ihre Königin verlangt eine ehrliche Antwort.','💗 Den Ameisen für ihre Hilfe danken','🔍 Nach dem geheimen Wurzelpfad fragen','⚔️ Den Weg gegen eine Spinnenbande sichern'],
+ ['Mangos in der Nacht','Ein Mango-Baum leuchtet mitten im Schatten. »Nicht pflücken«, zischt ein Papagei.','💗 Das Nest im Baum behüten','🔍 Nach dem Ursprung des Leuchtens fragen','⚔️ Den Papagei herausfordern'],
+ ['Affe mit Monokel','Ein sehr seriöser Affe behauptet, jede Liane sei ein Aufzug. Seine Fahrpläne sind aus Bananenschalen.','💗 Einem Passagier beim Einsteigen helfen','🔍 Den Lianenfahrplan überprüfen','⚔️ Die gefährliche Fahrt stoppen'],
+ ['Krokodil oder Baumstamm','Ein Baumstamm blinzelt. Miso flüstert: »Das ist kein Baumstamm.«','💗 Das verängstigte Tier nicht erschrecken','🔍 Seine Fußspuren untersuchen','⚔️ Einen weiten Satz über den Fluss wagen'],
+ ['Die gestohlene Sonne','Eine Affenfamilie trägt goldene Spiegel durch die Kronen. Unten bleibt alles düster.','💗 Die Familie nach ihren Sorgen fragen','🔍 Woher kommen die Spiegel?','⚔️ Den Spiegelräubern nachsetzen'],
+ ['Blätterflüstern','Ein Blatt sagt deinen Namen. Das nächste sagt einen anderen. Wer hat deine Identität im Wald verteilt?','💗 Die verwirrten Waldbewohner beruhigen','🔍 Das Flüstern zurückverfolgen','⚔️ Die falsche Stimme entlarven'],
+ ['Die schlafenden Trommeln','Drei Trommeln schlagen nur, wenn niemand hinschaut. Pip möchte einen Zeugen finden.','💗 Auf Pips Zweifel eingehen','🔍 Heimlich den Rhythmus untersuchen','⚔️ Den Trommeltakt herausfordern']
+ ],
+ race:[
+ ['Die Startflagge streikt','Die Startflagge weigert sich zu winken: »Ich bin gegen unnötige Eile!« Der Rivale rollt schon an.','💗 Den Streckenposten beruhigen','🔍 Den manipulierten Start prüfen','⚔️ Dem Rivalen trotzdem nachjagen'],
+ ['Der Reifen mit Höhenangst','Ein Reifen möchte nicht mehr am Kart hängen. »Da unten ist die Straße viel zu nah!«','💗 Den Reifen vorsichtig beruhigen','🔍 Den Schaden am Wagen untersuchen','⚔️ Den Ersatzreifen sofort montieren'],
+ ['Turbo-Tavis Geheimnis','Tavi verrät: »Mein Motor läuft mit Hoffnung und Himbeersaft.« Etwas daran klingt nicht ganz wahr.','💗 Tavi eine faire Chance geben','🔍 Den Motor genauer untersuchen','⚔️ Tavi zu einem Duell fordern'],
+ ['Rennkater mit Sonnenbrille','Ein Rivale bietet dir einen Keks für eine langsamere Runde. »Gerechtigkeit ist relativ!«','💗 Den Keks mit allen teilen','🔍 Nach dem Betrugsplan fragen','⚔️ Das Bestechungsangebot ablehnen'],
+ ['Die falsche Ziellinie','Eine Zielflagge taucht mitten auf der Strecke auf. Der Schiedsrichter ist eine Taube.','💗 Die anderen Fahrer warnen','🔍 Die richtige Ziellinie suchen','⚔️ Durch die falsche Flagge preschen'],
+ ['Ein Pokal voller Suppe','Im Siegerpokal schwappt warme Kürbissuppe. Angeblich soll sie die Reifen schneller machen.','💗 Die Suppe den Mechanikern bringen','🔍 Die seltsame Rezeptur prüfen','⚔️ Das Suppen-Doping aufdecken'],
+ ['Die Brücke mit Blinker','Ein Tunnel blinkt nach links, führt aber nach rechts. Darauf steht: »Nox war hier.«','💗 Die verirrten Fahrer sammeln','🔍 Die verwirrenden Schilder untersuchen','⚔️ Die falschen Pfeile abreißen'],
+ ['Die große Reifenrede','Vor dem Rennen hält ein Reifen eine Motivationsrede. Niemand hat ihn eingeladen.','💗 Dem Reifen applaudieren','🔍 Seine eigentliche Botschaft prüfen','⚔️ Zum Startpfiff antreten'],
+ ['Tavi ohne Bremse','Tavis Kart rast auf eine Kurve zu. »Meine Bremse denkt gerade nach!«','💗 Tavi vor der Kurve helfen','🔍 Die Bremsleitung untersuchen','⚔️ Die gefährliche Kurve riskieren'],
+ ['Ölfleck mit Persönlichkeit','Ein Ölfleck behauptet, er sei moderne Kunst. Die Rennleitung ist anderer Meinung.','💗 Die Strecke sicher machen','🔍 Den Ursprung des Flecks verfolgen','⚔️ Mit einem Sprung darüberrasen'],
+ ['Der falsche Turbo','Ein rotes Boostfeld blinkt im Rhythmus von Nox’ Uhr. Es könnte eine Falle sein.','💗 Die anderen Rennfahrer warnen','🔍 Das Boostfeld analysieren','⚔️ Den verdächtigen Turbo ausprobieren'],
+ ['Applaus aus dem Motor','Jemand klatscht aus deinem Motorraum. Ein winziger Mechaniker winkt.','💗 Den Mechaniker heraushelfen','🔍 Warum ist er im Motor?','⚔️ Vor dem Start das Kart anhalten']
+ ],
+ moon:[
+ ['Der letzte Mondkeks','Eine Astronautenkatze hält einen schwebenden Keks fest. »Er fliegt seit Dienstag!«','💗 Den hungrigen Astronauten füttern','🔍 Die ungewöhnliche Schwerkraft erforschen','⚔️ Den Keks vor dem UFO retten'],
+ ['Der höfliche Meteorit','Ein Meteorit entschuldigt sich vor dem Einschlag: »Tut mir leid, ich habe es eilig!«','💗 Einen sicheren Landeplatz anbieten','🔍 Seine Flugbahn berechnen','⚔️ Den Felsbrocken abschießen'],
+ ['Ein UFO parkt falsch','Ein UFO parkt quer über dem Krater. Auf dem Strafzettel steht: »Raumschiff des Königs«.','💗 Den gestrandeten Piloten helfen','🔍 Das königliche Kennzeichen prüfen','⚔️ Den Parkplatz räumen'],
+ ['Die verlorene Richtung','Ein Sprung dauert ewig. Pip dreht sich dreimal um die eigene Achse und fragt: »Wo ist unten?«','💗 Pip beim Landen helfen','🔍 Die Mondträgheit untersuchen','⚔️ Den nächsten Krater überspringen'],
+ ['Das Sternenradio','Ein Funkgerät spielt eine Nachricht von morgen. Die Stimme klingt erschreckend nach dir.','💗 Der Stimme antworten','🔍 Das Funksignal zurückverfolgen','⚔️ Die Zukunft vor Nox verteidigen'],
+ ['Der Mondmaulwurf','Ein Maulwurf gräbt auf dem Mond und beschwert sich: »Kein richtiger Dreck!«','💗 Ihm passende Erde besorgen','🔍 Nach seinen gefundenen Artefakten fragen','⚔️ Ein Wettrennen zum Krater starten'],
+ ['Die schwerelose Teetasse','Dahlias Teetasse schwebt über einer Schlucht. Darin steht die Uhrzeit des Untergangs.','💗 Die wertvolle Tasse auffangen','🔍 Die Uhrzeit entziffern','⚔️ Über die Schlucht zur Tasse springen'],
+ ['Kleine grüne Bürokraten','Drei Außerirdische wollen deinen Reisepass abstempeln. Der Stempel ist ein Meteor.','💗 Ihnen den Besuch freundlich erklären','🔍 Die außerirdischen Regeln verstehen','⚔️ Den Meteor-Stempel abwehren'],
+ ['Der Krater voller Spiegel','In einem Krater sieht jede Spiegelung älter aus als du. Nur ein Bild lächelt.','💗 Das lächelnde Spiegelkind ansprechen','🔍 Die Verzerrung untersuchen','⚔️ Den Spiegelbann aufbrechen'],
+ ['Sternenstaub statt Schnee','Ein schwebendes Staubkorn erzählt, es sei einmal Teil einer Uhr gewesen.','💗 Dem Staubkorn eine Heimreise wünschen','🔍 Nach Nox’ Uhrwerk fragen','⚔️ Die Sternenteile zurückerobern'],
+ ['Die große Planetenfrage','Ein kleiner Planet folgt dir wie ein Hund. Er möchte wissen, ob du sein Mond sein willst.','💗 Den einsamen Planeten trösten','🔍 Warum folgt er dir?','⚔️ Ihm einen eigenen Orbit zeigen'],
+ ['Die Uhr auf dem Mond','Mitten im Staub steht eine Standuhr. Sie tickt nur, wenn ein UFO darüber fliegt.','💗 Die Uhr für andere schützen','🔍 Das UFO-Signal entschlüsseln','⚔️ Die gestohlene Zeit zurückfordern']
+ ],
+ sea:[
+ ['Das U-Boot hat Schluckauf','Das U-Boot macht »HICKS!« und der Luftschlauch bildet einen Knoten. Pip wird blass.','💗 Den Schlauch für alle entwirren','🔍 Die Ventile untersuchen','⚔️ Die Strömung durchschwimmen'],
+ ['Atlantis bei Nacht','In Atlantis brennen noch Laternen, doch niemand ist zu Hause. Wer hat den Strom eingeschaltet?','💗 Die vermissten Bewohner suchen','🔍 Die alten Schalter überprüfen','⚔️ Das verbotene Stadttor öffnen'],
+ ['Die singende Qualle','Eine Qualle singt eine melancholische Arie. Jede Note lässt eine Luftblase platzen.','💗 Ihr bis zum Ende zuhören','🔍 Den Zusammenhang mit den Blasen prüfen','⚔️ Den gefährlichen Gesang stoppen'],
+ ['Der Brief im Muschelhaus','Eine Muschel weigert sich zu öffnen. »Der Brief darin ist ein Geheimnis des Königs.«','💗 Der Muschel Zeit geben','🔍 Nach dem königlichen Absender fragen','⚔️ Das Schloss vor Raubfischen schützen'],
+ ['Das falsche Seepferdchen','Ein Seepferdchen trägt einen Schnurrbart aus Seetang. »Ich bin ein Landpferd!«','💗 Die Schüchternheit des Tiers respektieren','🔍 Sein wahres Ziel erfragen','⚔️ Die Piratenfische vertreiben'],
+ ['Karte aus Korallen','Ein Korallenriff zeigt die Umrisse von Nox’ Schloss – tief unter Wasser.','💗 Die empfindlichen Korallen schützen','🔍 Die Karte sorgfältig entschlüsseln','⚔️ Den versunkenen Zugang erforschen'],
+ ['Der verschwundene Sauerstoff','Eine Luftblase wirft ihren Schatten in die falsche Richtung. Der Schlauch zieht plötzlich.','💗 Den Tauchpartner beruhigen','🔍 Den Riss im Schlauch suchen','⚔️ Den Wirbelstrom durchbrechen'],
+ ['Drei Fische im Mantel','Ein großer Trenchcoat nähert sich: Darin stehen drei kleine Fische übereinander.','💗 Ihnen ihre Tarnung lassen','🔍 Nach ihrer geheimen Mission fragen','⚔️ Die Fisch-Patrouille austricksen'],
+ ['Die Uhr der Tiefsee','Eine alte Glocke schlägt am Meeresboden. Alle Fische schwimmen rückwärts.','💗 Den verwirrten Fischen helfen','🔍 Die Glocke nach Nox’ Zeichen absuchen','⚔️ Mit der Glocke im Takt kämpfen'],
+ ['Ein Taucher ohne Schatten','Ein alter Taucher trägt keinen Schatten mehr. »Ich habe ihn an einen Oktopus verloren.«','💗 Den verlorenen Schatten suchen','🔍 Nach dem Oktopus fragen','⚔️ Den Schattenhandel beenden'],
+ ['Die königliche Badewanne','Mitten in Atlantis steht eine Badewanne, gefüllt mit trockener Luft. Das ist unmöglich.','💗 Die Luft für Erschöpfte bewahren','🔍 Den Zauber untersuchen','⚔️ Den Luftzauber verteidigen'],
+ ['Ein Wal kennt deinen Namen','Ein Wal summt deinen Namen in einer Sprache, die du nie gelernt hast.','💗 Dem Wal danken und zuhören','🔍 Den Ursprung des Namens erfragen','⚔️ Der Melodie in die Tiefe folgen']
+ ],
+ mountain:[
+ ['Der Adler mit Paket','Ein Adler trägt ein Paket mit der Aufschrift: »NICHT VOR MORGEN ÖFFNEN«. Morgen kommt vielleicht nie.','💗 Das Paket für den Besitzer sichern','🔍 Nach seinem Absender fragen','⚔️ Die Lieferung vor Nox retten'],
+ ['Lawinenvorhersage','Ein Murmeltier behauptet: »Die Lawine kommt, wenn meine Nase juckt.« Es niest.','💗 Die Bergwanderer warnen','🔍 Die Schneezeichen überprüfen','⚔️ Die Schlucht rechtzeitig überqueren'],
+ ['Die mürrische Bergziege','Eine Bergziege blockiert die Brücke. »Hier kommt nur vorbei, wer einen guten Witz kennt.«','💗 Ihr einen freundlichen Witz erzählen','🔍 Nach dem sicheren Bergweg fragen','⚔️ Einen Sprung über die Schlucht riskieren'],
+ ['Das verschwundene Gipfelkreuz','Auf dem höchsten Felsen steckt nur ein Uhrzeiger. Er zeigt bergab.','💗 Nach dem vermissten Gipfelkreuz suchen','🔍 Den Uhrzeiger genauer untersuchen','⚔️ Nox’ Zeiger aus dem Fels ziehen'],
+ ['Die drei falschen Pfade','Drei Wege führen nach oben. Auf einem liegen Schneefedern, auf einem Münzen, auf einem eine Katzenpfote.','💗 Den vermissten Katzen folgen','🔍 Die Fußspuren miteinander vergleichen','⚔️ Den gefährlichsten Gipfelweg nehmen'],
+ ['Ein Echo mit Meinung','Dein Echo widerspricht dir. »Nicht da lang!«, ruft es zurück.','💗 Das Echo freundlich befragen','🔍 Die Felswände nach Hohlräumen absuchen','⚔️ Dem Echo mutig entgegentreten'],
+ ['Bergkristall im Sturm','Ein Kristall blinkt im Rhythmus der Herzuhr. Doch ein Steinbock verteidigt ihn.','💗 Den Steinbock nicht verletzen','🔍 Die Schwingung des Kristalls prüfen','⚔️ Den Kristall vor Nox sichern'],
+ ['Der geschmolzene Schnee','Auf einer einzigen Felsplatte liegt warmer Schnee. Darunter befindet sich ein Brief.','💗 Den Brief vor dem Sturm retten','🔍 Das eigenartige Schmelzwasser untersuchen','⚔️ Die Felsplatte anheben'],
+ ['Der schweigende Wächter','Am Pass sitzt ein alter Kater, der nie spricht. Heute sagt er ein Wort: »Dahlia.«','💗 Den Wächter vorsichtig ansprechen','🔍 Nach seiner Erinnerung an Dahlia fragen','⚔️ Die verbotene Festung betreten'],
+ ['Die letzte Seilbahn','Eine Seilbahn fährt ohne Seil. Ein Fahrgast winkt aus der Zukunft.','💗 Den Fahrgast retten','🔍 Die Zeitverzerrung verfolgen','⚔️ Einen Sprung zur Seilbahn wagen'],
+ ['Der Wind hat Post','Ein Brief bleibt gegen den Sturm stehen. Er trägt deine Handschrift von morgen.','💗 Den Brief behutsam bergen','🔍 Die zeitliche Herkunft prüfen','⚔️ Die Zukunft selbst in die Pfoten nehmen'],
+ ['Die Bergglocke','Am Gipfel läutet eine Glocke nur bei Gefahr. Heute läutet sie dreimal, obwohl alles ruhig scheint.','💗 Die Bewohner in Sicherheit bringen','🔍 Die drei Warnschläge entschlüsseln','⚔️ Den verborgenen Wächter suchen']
+ ]
+};
+// Universal encounters supplement every region, never reusing a scene during one campaign.
+const WANDERING_DIALOGUES=[
+ ['Eine verlorene Münze','Eine goldene Münze hüpft davon und ruft: »Ich bin kein Taschengeld!«','💗 Die Münze zu ihrem Besitzer bringen','🔍 Wer hat die Münze verzaubert?','⚔️ Die flüchtende Münze fangen'],
+ ['Die vergessene Einladung','Ein Umschlag lädt dich zu einem Fest ein, das gestern stattgefunden haben soll.','💗 Den Gastgeber trösten','🔍 Das seltsame Datum prüfen','⚔️ Dem Zeiträuber nachlaufen'],
+ ['Ein Pilz erzählt Geschichten','Ein sprechender Pilz gibt zu: »Ich weiß nicht, ob ich Gift oder ein Dichter bin.«','💗 Seiner Geschichte zuhören','🔍 Die Sporen untersuchen','⚔️ Die giftige Verwechslung klären'],
+ ['Nox hat unterschrieben','Jemand hat NOX auf die Rückseite eines Regenbogens geschrieben.','💗 Die erschrockenen Tiere beruhigen','🔍 Die Tinte verfolgen','⚔️ Den Regenbogen befreien'],
+ ['Pips verlorene Brille','Pip hat seine Brille auf der Nase und sucht sie seit drei Stunden.','💗 Pip freundlich darauf hinweisen','🔍 Warum sieht Pip trotzdem nichts?','⚔️ Das Gerücht von der unsichtbaren Brille beenden'],
+ ['Der Schatten ist zu groß','Dein Schatten ist plötzlich dreimal so groß und hat einen Hut auf.','💗 Dem Schatten freundlich winken','🔍 Woher kommt der fremde Hut?','⚔️ Den Schatten zum Duell fordern'],
+ ['Ein singender Wegweiser','Ein Wegweiser singt jedes Ziel in einer anderen Tonart. Keine zeigt nach Norden.','💗 Den Reisenden helfen','🔍 Die Tonfolge entziffern','⚔️ Den richtigen Weg erzwingen'],
+ ['Der Teekessel des Schicksals','Ein Teekessel sagt dir voraus, dass du bald eine Entscheidung triffst. Das war offensichtlich.','💗 Dem Kessel für den Versuch danken','🔍 Nach einer besseren Vorhersage fragen','⚔️ Die Schicksalsvorhersage herausfordern'],
+ ['Eine Katze in Verkleidung','Ein Kater trägt eine falsche Nase und behauptet, ein Baum zu sein.','💗 Die Verkleidung respektieren','🔍 Warum versteckt er sich?','⚔️ Seine Verfolger ablenken'],
+ ['Fünf Minuten zu spät','Eine Uhr bittet dich, fünf Minuten Zeit zu spenden. »Ich verspreche, sie zurückzugeben!«','💗 Der müden Uhr helfen','🔍 Wohin verschwinden die Minuten?','⚔️ Den Zeithandel verweigern'],
+ ['Der letzte Wunsch','Ein kleiner Stern will wissen, was du mit einem freien Morgen anfangen würdest.','💗 Ein Fest für alle planen','🔍 Woher kennt er morgen?','⚔️ Das Morgen für alle zurückholen'],
+ ['Der Keks der Wahrheit','Ein Keks behauptet, jede Lüge schmecke bitter. Pip möchte einen probieren.','💗 Pip den Keks anbieten','🔍 Die Behauptung überprüfen','⚔️ Die Lügner herausfordern'],
+ ['Rettung für einen Wächter','Ein erschöpfter Wachkater gesteht: »Ich habe Nox nur aus Angst gehorcht.«','💗 Ihm beim Ausstieg helfen','🔍 Seine Befehle sehen wollen','⚔️ Den Uhrmeister zur Verantwortung ziehen'],
+ ['Die leere Schatztruhe','Eine leere Truhe kichert: »Der Schatz war die Frage, die du nie gestellt hast.«','💗 Den enttäuschten Suchern helfen','🔍 Welche Frage fehlt?','⚔️ Den Truhenzauber brechen'],
+ ['Die tanzende Fußspur','Eine Pfotenspur springt von Stein zu Stein, ganz ohne Katze.','💗 Der Spur vorsichtig folgen','🔍 Den unsichtbaren Besitzer suchen','⚔️ Die Pfotenspur einfangen'],
+ ['Der falsche Mond','In einer Pfütze scheint ein zweiter Mond. Er zwinkert dir zu.','💗 Das kleine Spiegelwesen begrüßen','🔍 Nach der Quelle des Spiegellichts fragen','⚔️ Den falschen Mond aufdecken'],
+ ['Eine Bitte von Dahlia','Ein königlicher Brief bittet: »Urteile erst, wenn du alles gehört hast.«','💗 Der Königin Gehör schenken','🔍 Die Siegel vergleichen','⚔️ Nox’ Befehle öffentlich machen'],
+ ['Die kleine Zeitspinne','Eine Spinne webt ein Netz aus Uhrzeigern. Sie hat offensichtlich viel Freizeit.','💗 Das Netz vor Wachkatzen schützen','🔍 Nach dem Ursprung der Zeiger fragen','⚔️ Den Zeitknoten lösen'],
+ ['Das lachende Schloss','Ein Vorhängeschloss lacht, wenn du traurig bist. Das ist ziemlich unhöflich.','💗 Das Schloss zum Lachen ohne Schaden bringen','🔍 Was steckt hinter dem Schloss?','⚔️ Die versperrte Tür öffnen'],
+ ['Das Haus im Brief','Ein Brief enthält ein winziges Bild von deinem Zuhause – aber der Himmel ist darin anders.','💗 Nach den Bewohnern sehen','🔍 Die Abweichung untersuchen','⚔️ Den falschen Himmel zurückdrängen'],
+ ['Der vergessliche Erzähler','Ein alter Erzähler sagt: »Diese Geschichte habe ich noch nie erzählt!« Alle stöhnen.','💗 Ihm zuhören, ohne zu spotten','🔍 Nach der verlorenen Erinnerung fragen','⚔️ Die Geschichte selbst weiterschreiben'],
+ ['Eine geheime Botschaft','Auf einem Stein steht: »Wer nur den kürzesten Weg sucht, übersieht manchmal jemanden.«','💗 Nach der zurückgelassenen Person suchen','🔍 Den Schreiber identifizieren','⚔️ Den gefährlichen Umweg wagen'],
+ ['Spiegel-Momos Handschrift','Du entdeckst deinen Namen, geschrieben von einer Pfote, die du nicht kennst.','💗 Mit der fremden Katze sprechen wollen','🔍 Die Tinte aus der Zukunft prüfen','⚔️ Den Brief vor Nox schützen'],
+ ['Das große Schweigen','Plötzlich sind alle Vögel still. Ein kleiner Vogel zeigt nur nach oben.','💗 Den erschrockenen Vogel begleiten','🔍 Was hat ihn verstummen lassen?','⚔️ Den unsichtbaren Feind suchen']
+];
+const OPENING_SCENES=[
+ ['Ein Morgen ohne Morgen','Das Blütenfest beginnt. Plötzlich hält die Herzuhr an, und ein ganzer Kirschbaum wird vor deinen Augen grau. Pip schreit, Dahlia sei schuld!','💗 Zuerst die Gäste aus dem Garten retten','⚔️ Direkt die sieben Zeitglocken suchen'],
+ ['Die letzte Kirschblüte','Eine einzige Kirschblüte landet auf deiner Nase und flüstert: »Holt die Zeit zurück!« Im selben Moment verstummt die Herzuhr.','💗 Die verwelkenden Blumen beschützen','⚔️ Dem Ruf in Richtung Schloss folgen'],
+ ['Pips verhängnisvolle Nachricht','Pip platzt mit einer königlichen Depesche ins Fest. Auf ihrer Rückseite leuchtet für einen Atemzug Nox’ Zeichen.','🔍 Erst die gefälschte Nachricht prüfen','⚔️ Den Uhrmeister sofort suchen'],
+ ['Das Fest im Stillstand','Das Feuerwerk hängt unbeweglich am Himmel. Nur du und die sieben Orakelpilze bewegen sich noch.','💗 Die erstarrten Freunde retten','⚔️ Das stillstehende Schloss stürmen'],
+ ['Ein Fremder im Uhrwerk','Aus der Herzuhr steigt Rauch, der sich zu einem grinsenden Katergesicht formt. »Ein perfekter Tag endet nie«, raunt Nox.','💗 Die Bewohner vor dem Rauch warnen','⚔️ Nox zeigen, dass ein Morgen kommen muss'],
+ ['Die verschwundene Minute','Alle Uhren springen von 11:59 auf 11:58. Pip behauptet, die Königin habe eine Minute gestohlen.','🔍 Pips Zeitangabe hinterfragen','💗 Die erschrockenen Tiere beruhigen'],
+ ['Ein Brief, der sich selbst liest','Ein Brief von morgen öffnet sich mitten auf dem Fest: »Vertraue keiner Uhr, die nicht weitergehen darf.«','🔍 Den Brief auf Nox’ Siegel untersuchen','⚔️ Sofort nach dem Verfasser suchen'],
+ ['Die verstummte Melodie','Die Festmusik bricht ab. Ein einziges Glöckchen spielt weiter – eines der sieben Orakelpilze antwortet.','💗 Die verstummten Musiker begleiten','⚔️ Dem Pilz durch das Schloss folgen'],
+ ['Schatten über dem Fest','Nox’ Wachkatzen erscheinen aus dem Nichts und verlangen, das Fest abzusagen. Pip wirft Dahlia Verrat vor.','💗 Die Kinder vom Festplatz bringen','⚔️ Den Wachkatzen den Weg versperren'],
+ ['Dahlias verschwundene Farben','Der königliche Garten verblasst wie ein altes Foto. Dahlia steht am Fenster – und versteckt eine kleine Sanduhr.','🔍 Die Sanduhr und ihre Bedeutung untersuchen','💗 Den Bürgern zuerst helfen'],
+ ['Die Uhr schlägt dreizehn','Die Herzuhr schlägt ein dreizehntes Mal. Dann bleibt sie stehen, und alle Schatten zeigen in Richtung Schloss.','💗 Den Bewohnern helfen, ihre Schatten zu finden','⚔️ Den seltsamen Uhrenschlägen folgen'],
+ ['Kuchen für die Ewigkeit','Ein Geburtstagskuchen bleibt in der Luft stehen. Pip freut sich über ewiges Dessert – bis alle Blumen verwelken.','💗 Pip die Gefahr erklären und Tiere retten','⚔️ Den Uhrmacher mit dem Kuchen konfrontieren']
+];
+// Fully original options are attached to each scene. Draws are stored in save files
+// and never returned again during the same campaign (even after reloading).
+function dialogueSeen(){return Array.isArray(save.dialogueSeen)?save.dialogueSeen:(save.dialogueSeen=[])}
+function drawNewDialogue(prefix,entries){
+ const seen=dialogueSeen(),fresh=entries.map((entry,i)=>({entry,id:prefix+':'+i})).filter(o=>!seen.includes(o.id));
+ if(!fresh.length)return null;
+ const salt=seen.length*37+save.level*791+prefix.length*31+save.encounters*13;
+ const pick=fresh[Math.floor(campaignVar(salt)*fresh.length)];
+ seen.push(pick.id);persist();return {...pick,id:pick.id};
+}
+function newConversation(){
+ const biome=level?.realm?.id||'castle';
+ const preferred=(WORLD_DIALOGUES[biome]||WORLD_DIALOGUES.castle);
+ // Prefer area-specific encounters, but global ones make long campaigns varied.
+ const seen=dialogueSeen();const areaLeft=preferred.some((_,i)=>!seen.includes('scene-'+biome+':'+i));
+ const globalLeft=WANDERING_DIALOGUES.some((_,i)=>!seen.includes('scene-wandering:'+i));
+ const chooseGlobal=globalLeft&&(!areaLeft||campaignVar(seen.length*179+save.level*19)>.76);
+ return (chooseGlobal?drawNewDialogue('scene-wandering',WANDERING_DIALOGUES):drawNewDialogue('scene-'+biome,preferred))
+    ||drawNewDialogue('scene-wandering',WANDERING_DIALOGUES)
+    ||Object.entries(WORLD_DIALOGUES).map(([id,pool])=>drawNewDialogue('scene-'+id,pool)).find(Boolean);
+}
 function talkWithCat(){
  if(phase!=='playing'||!level||!player)return;
- const npc=level.npcs[0],name=npc[1];
- const persona=personality(save.level);
- const prompt=`${name} ist heute ${persona} und berichtet: »${mystery().clue}« ${hero().name}, wem glaubst du und was sollen wir als Nächstes tun?`;
- const options=[
- {label:'💗 Wir halten zusammen!',action:()=>answerToCat(name,'Ich helfe dir, wir retten die Katzen zusammen!')},
- {label:'🔍 Ich will die Wahrheit herausfinden!',action:()=>answerToCat(name,'Warum passiert das? Ich suche Beweise und die Wahrheit!')},
- {label:'😼 Ich kämpfe mich durch!',action:()=>answerToCat(name,'Ich besiege die Gegner und kämpfe für den Wald!')}
- ];
- dialog({tag:'DYNAMISCHES KATZENGESPRÄCH · '+mystery().name,title:'Was antwortest du '+name+'?',portrait:'🐱 💬 🐈',body:escapeText(prompt),options});
+ const npc=level.npcs[0],name=npc?.[1]||'Pip',scene=newConversation();
+ if(!scene)return resume();
+ const [title,situation,a,b,c]=scene.entry;
+ const responseOptions=[a,b,c].map((label)=>({label,action:()=>answerToCat(name,label)}));
+ const prompt=name+' ('+personality(save.level)+'): »'+situation+'«';
+ dialog({tag:'✦ '+(realmOf(save.level).name.toUpperCase())+' · '+mystery().name,
+    title:title,portrait:'🐱 💬 '+(FRIEND_ROSTER[name]?.icon||'🐾'),
+    body:escapeText(prompt),options:responseOptions});
  const holder=overlayContent.querySelector('.story-card');
  const form=document.createElement('form');form.className='free-answer';
- const field=document.createElement('textarea');field.rows=2;field.maxLength=160;field.placeholder='Deine eigene Antwort an '+name+' …';field.setAttribute('aria-label','Eigene Antwort an '+name);
+ const field=document.createElement('textarea');field.rows=2;field.maxLength=160;
+ field.placeholder='Was antwortest du '+name+'?';field.setAttribute('aria-label','Eigene Antwort an '+name);
  const submit=document.createElement('button');submit.type='submit';submit.className='story-button free-send';submit.textContent='💬 Eigene Antwort senden';
  form.append(field,submit);holder.append(form);
  form.addEventListener('submit',e=>{e.preventDefault();const answer=field.value.trim();if(!answer){field.focus();return}hideOverlay();answerToCat(name,answer)});
