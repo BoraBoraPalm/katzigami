@@ -370,6 +370,53 @@ function ending(choice){save.flags.finalChoice=choice;save.won=true;let type,tit
  const epilogue=bonds>=3?' Deine befreundeten Katzen organisieren ein prachtvolles Fest.':bonds<=-2?' Einige misstrauische Katzen bleiben als schwierige Rivalen zurück.':' Die anderen Katzen versprechen, noch viele Fragen zu stellen.';
  body+=' '+mystery().ending+epilogue;
  save.ending=type;persist();sound('win');phase='ending';presentCard(`🏆 ${type}`,title,'🐈 🌈 🍄',body,[{label:'🐾 Die Pilze noch einmal suchen',action:()=>{save.won=false;save.level=0;save.checkpoint=0;persist();enterLevel(0)}},{label:'🏠 Hauptmenü',secondary:true,action:menu}])}
+function pickCoin(coin){
+ if(coin.taken)return false;coin.taken=true;save.coins+=COIN_VALUES[coin.type];
+ if(!save.coinTaken.includes(coin.id))save.coinTaken.push(coin.id);
+ burst(coin.x,coin.y,coin.type==='gold'?'#ffdf73':coin.type==='silver'?'#c8ebf8':'#dc9d65',9);
+ sound('pick');persist();updateUI();return true;
+}
+function awardDice(house){
+ const roll=1+Math.floor(Math.random()*6),name=hero().name;
+ let reward='',portrait='🎲';
+ if(roll===1){save.hearts=Math.min(diff().hearts,save.hearts+2);reward='💗 Zwei Herzen für '+name+'!';}
+ else if(roll===2){save.lives+=1;reward='🐾 Ein zusätzliches Leben!';}
+ else if(roll===3){save.coins+=30;reward='🪙 30 Münzen – Jackpot!';}
+ else if(roll===4||roll===5){const keys=Object.keys(COSTUMES),outfit=keys[Math.floor(Math.random()*keys.length)];if(!save.costumes.includes(outfit))save.costumes.push(outfit);save.outfit=outfit;reward='🎩 Neues Kostüm: '+COSTUMES[outfit]+'!';}
+ else {const keys=Object.keys(SMALL_PERKS),perk=keys[Math.floor(Math.random()*keys.length)];save.perk=perk;reward='✨ Kleine Fähigkeit: '+SMALL_PERKS[perk]+'!';}
+ save.rolledHouses.push(house.id);house.used=true;persist();updateUI();sound('transform');
+ dialog({tag:'WÜRFELHAUS · '+roll+' AUGEN',title:'Glücks-Miau!',portrait:'🎲 '+portrait+' '+hero().icon,body:reward+' Das Glückshaus kann in diesem Durchlauf nur einmal verwendet werden.',options:[{label:'🐾 Weiter durch die Welt!',action:resume}]});
+}
+function visitHouse(house){
+ if(house.used||phase!=='playing')return;
+ house.cooldown=12;player.vx=0;
+ dialog({tag:'HAUS DER WÜRFELNAGETIERE',title:'Hereinspaziert zum Katzenwürfeln!',portrait:'🏠 🎲 🐭',body:hero().name+' betritt die Glückshütte! Ein würfelnder Hamster fragt: »10 Münzen für eine Überraschung?« Du hast '+save.coins+' Münzen. Zu gewinnen: Leben, Herzen, Münzen, lustige Kleidung oder kleine Fähigkeiten.',
+ options:[{label:'🎲 10 Münzen einsetzen!',action:()=>{if(save.coins<10){dialog({tag:'ZU WENIG MÜNZEN',title:'Pleite-Pfötchen!',portrait:'🐹 🪙',body:'Du brauchst zehn Münzen. Der Hamster akzeptiert leider keine Keksbrösel.',options:[{label:'🐾 Wieder hinaus',action:resume}]})}else{save.coins-=10;awardDice(house)}}},
+ {label:'🐾 Lieber Münzen sparen',secondary:true,action:resume}]});
+}
+function beginTube(tube){
+ if(transport||player.tubeCooldown>0)return false;
+ const route=level.routes.find(r=>r.id===tube.route);
+ if(!route)return false;
+ transport={route:route.id,direction:tube.direction,elapsed:0,x:tube.x,y:tube.y};
+ player.vx=0;player.vy=0;player.grounded=false;clearInputs();sound('transform');toast(tube.direction==='in'?'🌀 FFFSCHLURP! '+hero().name+' wird eingesaugt!':'🎺 PLÖPP! Der Rückweg ruft!');
+ return true;
+}
+function tubeTick(dt){
+ if(!transport)return false;
+ transport.elapsed+=dt;
+ const tx=transport.x;
+ player.x+=(tx-player.x)*Math.min(1,dt*9);
+ player.y+=(transport.y-player.y-24)*Math.min(1,dt*6);
+ if(transport.elapsed>=.83){
+  const route=level.routes.find(q=>q.id===transport.route);
+  if(transport.direction==='in'){player.route=route.id;player.x=route.from+148;player.y=route.kind==='cloud'?-580:905}
+  else {player.route=null;player.x=Math.min(level.width-220,route.end+115);player.y=300}
+  player.vx=player.facing*115;player.vy=-160;player.inv=1.35;player.tubeCooldown=2.2;player.dizzy=2.2;
+  effects.dizzy=2.2;transport=null;sound('meow');toast('💫 '+hero().name+' taumelt! Wo sind die eigenen Pfoten?');
+ }
+ return true;
+}
 function takeCharm(item){
  if(item.taken)return;
  item.taken=true;const p=CHARMS[item.kind];effects[item.kind]=p.seconds;
@@ -395,11 +442,15 @@ function castSpecial(){
  if(phase!=='playing'||!save.power||!player||specialCooldown>0||effects.silence>0)return false;
  const p=POWERS[save.power],x=player.x+player.w/2+player.facing*29,y=player.y+22;
  const basic={x,y,vx:player.facing*560,vy:0,life:1.5,kind:save.power,color:p.color,damage:p.damage,hit:[],pierce:1,radius:14};
+ if(save.character==='chicken'){basic.vy=-265;basic.gravity=570;basic.color='#ffe0b3'}
+ if(save.character==='dog'){basic.bounce=true;basic.color='#99d4ff'}
+ if(save.character==='rabbit'){basic.vy=-100;basic.color='#f2c0f5'}
+ if(save.character==='fox'){basic.spin=true;basic.color='#ffc3a0'}
  if(p.rank===1)shots.push(basic);
  if(p.rank===2)shots.push({...basic,vx:player.facing*690,radius:20,pierce:2,life:1.3});
  if(p.rank===3)shots.push({...basic,vx:player.facing*470,radius:24,splash:110,life:1.8});
  if(p.rank===4){for(let i=-1;i<=1;i++)shots.push({...basic,x:x+i*8,y:y+i*15,vx:player.facing*(520+Math.abs(i)*55),vy:i*130,radius:13,homing:true,life:2.4})}
- specialCooldown=p.cooldown;burst(x,y,p.color,8+p.rank*4);sound('cast');
+ specialCooldown=p.cooldown*(save.perk==='rapid'?.85:1);burst(x,y,p.color,8+p.rank*4);sound('cast');
  if(navigator.vibrate)navigator.vibrate(12);return true;
 }
 function hitEnemy(e,damage,x,y){
@@ -435,25 +486,31 @@ function hurt(){
  persist();
 }
 function jump(){if(phase!=='playing')return;queuedJump=.16}
-function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
+function simulate(dt){if(phase!=='playing'||!player||!level)return;clock+=dt;
+ if(transport){tubeTick(dt);camY+=(clamp(player.y-330,-860,870)-camY)*Math.min(1,dt*8);return}
+ player.tubeCooldown=Math.max(0,player.tubeCooldown-dt);
+ player.dizzy=Math.max(0,player.dizzy-dt);
+ for(const house of level.houses)house.cooldown=Math.max(0,house.cooldown-dt);
+ for(const plat of level.routePlatforms){if(plat.moving){plat.x=plat.baseX+Math.sin(clock*1.1+plat.phase)*32;plat.y=plat.baseY+Math.cos(clock*1.45+plat.phase)*24}}
+
  const blocked=effects.silence>0;
  for(const key of Object.keys(effects)){effects[key]=Math.max(0,effects[key]-dt);if(!effects[key])delete effects[key]}
  if(blocked!==!!effects.silence)updateUI();
  player.inv=Math.max(0,player.inv-dt);boss.inv=Math.max(0,boss.inv-dt);powerFlash=Math.max(0,powerFlash-dt);specialCooldown=Math.max(0,specialCooldown-dt);coyote=Math.max(0,coyote-dt);queuedJump=Math.max(0,queuedJump-dt);
- const speedFactor=(effects.speed>0?1.65:1)*(effects.slow>0?.52:1);
+ const speedFactor=(effects.speed>0?1.65:1)*(effects.slow>0?.52:1)*(player.dizzy>0?.64:1);
  const target=(Number(vxInput.right)-Number(vxInput.left))*330*speedFactor;
  const acceleration=player.grounded?2350:1470;
  player.vx+=(target-player.vx)*Math.min(1,dt* (acceleration/330));if(Math.abs(target)<1&&Math.abs(player.vx)<4)player.vx=0;
  if(target)player.facing=target>0?1:-1;
- if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
- if(!vxInput.jump&&player.vy<-280)player.vy+=1850*dt;
+ if(queuedJump>0&&(player.grounded||coyote>0)){player.vy=save.perk==='bounce'?-750:-710;player.grounded=false;coyote=0;queuedJump=0;sound('jump')}
+ if(!vxInput.jump&&player.vy<-280)player.vy+=save.perk==='glide'?1350*dt:1850*dt;
  const previousBottom=player.y+player.h;
- player.vy=Math.min(1100,player.vy+1780*dt);
+ player.vy=Math.min(1100,player.vy+(save.perk==='glide'?1500:1780)*dt);
  if(effects.fly>0&&vxInput.jump){player.vy=-280;player.grounded=false;coyote=0;queuedJump=0}
  if(effects.fly>0)player.y=Math.max(48,player.y);
  player.x=clamp(player.x+player.vx*dt,0,level.width-player.w);if(player.grounded&&Math.abs(player.vx)>14)player.runCycle+=Math.abs(player.vx)*dt*.073;
  player.y+=player.vy*dt;let landing=null;
- if(player.vy>=0){for(const platform of [...level.ground,...level.platforms]){
+ if(player.vy>=0){for(const platform of [...level.ground,...level.platforms,...level.routePlatforms]){
  if(player.x+player.w-7<platform.x||player.x+7>platform.x+platform.w)continue;
  if(previousBottom<=platform.y+10&&player.y+player.h>=platform.y){if(!landing||platform.y<landing.y)landing=platform}
  }}
@@ -467,11 +524,23 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  }
  for(const [k,cp] of level.checkpoints.entries()){if(player.x>cp&&save.checkpoint<cp){save.checkpoint=cp;persist();toast(k===0?'✿ Schnurrpunkt erreicht!':'✿ Letzter Schnurrpunkt erreicht!');sound('choice')}}
  for(const item of level.items){if(item.taken)continue;if(Math.abs(player.x+player.w/2-item.x)<37&&Math.abs(player.y+player.h/2-item.y)<49)collect(item)}
+ for(const coin of level.coins){
+  if(!coin.taken&&Math.abs(player.x+20-coin.x)<(save.perk==='magnet'?115:29)&&Math.abs(player.y+27-coin.y)<(save.perk==='magnet'?105:36))pickCoin(coin)
+ }
+ for(const house of level.houses){
+  if(!house.used&&house.cooldown<=0&&player.y>310&&player.y<470&&Math.abs(player.x+20-house.x)<52){visitHouse(house);return}
+ }
+ for(const tube of level.tubes){
+  if(player.tubeCooldown<=0&&tube.direction===(player.route?'out':'in')&&(!player.route||player.route===tube.route)&&Math.abs(player.x+20-tube.x)<45&&Math.abs(player.y+25-tube.y)<60){beginTube(tube);return}
+ }
+ if(player.route==='cloud'&&player.y>260){player.route=null;toast('☁️ PLUMPS! Zurück in die normale Welt!');}
+ if(player.route==='depth'&&player.y<450){player.route=null;toast('🐛 Zurück an die Oberfläche!');}
  for(const item of level.charms){if(!item.taken&&Math.abs(player.x+player.w/2-item.x)<36&&Math.abs(player.y+player.h/2-item.y)<51)takeCharm(item)}
+ if(player.route==='depth'&&level.routeHazards.some(h=>Math.abs(player.x+20-h.x)<23&&Math.abs(player.y-h.y)<100))hurt();
  const powerItem=level.powerItem;if(!powerItem.taken&&Math.abs(player.x+player.w/2-powerItem.x)<38&&Math.abs(player.y+player.h/2-powerItem.y)<51)transform(powerItem);
  for(const shot of shots){
   if(shot.homing){let target=null,distance=450;for(const e of level.enemies){if(e.dead||shot.hit.includes(e.id))continue;const d=Math.hypot(e.x-shot.x,e.y-shot.y);if(d<distance){distance=d;target={x:e.x+18,y:e.y+20}}}if(!target&&boss.active&&!boss.done)target={x:boss.x+Math.sin(clock*1.3)*60+15,y:boss.y+22};if(target){const desired=Math.atan2(target.y-shot.y,target.x-shot.x),current=Math.atan2(shot.vy,shot.vx);const delta=Math.atan2(Math.sin(desired-current),Math.cos(desired-current)),a=current+clamp(delta,-dt*5.2,dt*5.2),v=610;shot.vx=Math.cos(a)*v;shot.vy=Math.sin(a)*v}}
-  shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;
+  shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;if(shot.gravity)shot.vy+=shot.gravity*dt;if(shot.bounce)shot.y+=Math.sin(clock*16+shot.x*.01)*2;if(shot.spin)shot.y+=Math.sin(clock*18)*2;shot.life-=dt;
   for(const e of level.enemies){if(e.dead||shot.hit.includes(e.id)||Math.abs(shot.x-(e.x+18))>20+shot.radius||Math.abs(shot.y-(e.y+24))>26+shot.radius)continue;
    if(hitEnemy(e,shot.damage,shot.x,shot.y)){shot.hit.push(e.id);shot.pierce--;if(shot.splash){for(const near of level.enemies){if(near!==e&&!near.dead&&Math.hypot(near.x-e.x,near.y-e.y)<shot.splash)hitEnemy(near,shot.damage,near.x,near.y)}burst(e.x,e.y,shot.color,32)}if(shot.pierce<=0)shot.life=0;break}
   }
@@ -500,7 +569,7 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
     burst(e.x,e.y,info.color,6)
    }
   }
-  e.y=e.type==='jumper'?411-Math.max(0,Math.sin(clock*2.6+e.seed))*55:e.type==='witch'||e.type==='phantom'?365+Math.sin(clock*(e.type==='phantom'?3:2)+e.seed)*28:e.type==='ninja'?411-Math.max(0,Math.sin(clock*3.8+e.seed))*32:411;
+  e.y=e.route?(e.baseY+(e.type==='bird'||e.type==='bat'?Math.sin(clock*2.5+e.seed)*34:Math.sin(clock+e.seed)*6)):e.type==='jumper'?411-Math.max(0,Math.sin(clock*2.6+e.seed))*55:e.type==='witch'||e.type==='phantom'?365+Math.sin(clock*(e.type==='phantom'?3:2)+e.seed)*28:e.type==='ninja'?411-Math.max(0,Math.sin(clock*3.8+e.seed))*32:411;
   if(e.type==='titan'||e.type==='guardian')e.y=400;
   if(e.type==='witch'&&Math.abs(player.x-e.x)<390){e.attackTimer-=dt;if(e.attackTimer<=0){e.attackTimer=2.7;const dx=player.x-e.x,dy=player.y-e.y;const length=Math.max(1,Math.hypot(dx,dy));enemyShots.push({x:e.x+18,y:e.y+16,vx:dx/length*195,vy:dy/length*195,life:3});burst(e.x,e.y,'#c3abe8',5)}}
   const ey=e.y,ew=info.scale*55,eh=info.scale*70;
@@ -509,8 +578,9 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  if(isFinal(save.level)&&!boss.done){const bx=boss.x+Math.sin(clock*1.3)*60,bY=boss.y;
  if(player.x>level.width-475&&!boss.triggered)bossTalk();
  if(boss.active&&boss.inv<=0&&player.x+player.w>bx-20&&player.x<bx+49&&player.y+player.h>bY&&player.y<bY+51){if(player.vy>80&&previousBottom<=bY+16){hitBoss(1,bx,bY);player.vy=-575;player.grounded=false}else hurt()}}
- if(player.x>level.width-118){player.x=level.width-118;checkEndOfLevel()}
+ if(player.x>level.width-118&&player.y>180&&player.y<540){player.x=level.width-118;checkEndOfLevel()}
  cam+=(clamp(player.x-viewW*.33,0,Math.max(0,level.width-viewW))-cam)*Math.min(1,dt*5);
+ camY+=(clamp(player.y-330,-850,865)-camY)*Math.min(1,dt*6);
  if(performance.now()>toastUntil)$('toast').classList.remove('show');
 }
 function round(x,y,w,h,r,fill,stroke,lw=2){ctx.beginPath();ctx.roundRect(x,y,w,h,Math.min(r,w/2,h/2));if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.lineWidth=lw;ctx.strokeStyle=stroke;ctx.stroke()}}
