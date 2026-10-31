@@ -33,6 +33,19 @@ const ENEMY_TYPES={
  archer:{name:'Bogenmieze',hp:5,range:65,speed:1.1,scale:.76,color:'#ffc287',score:5},
  guardian:{name:'Wächterkater',hp:10,range:44,speed:.7,scale:1.02,color:'#b6caaa',score:7}
 };
+const BIOME_ENEMY_TYPES={
+ ghost:{name:'Plötzlich-Geist',hp:3,range:72,speed:1.6,scale:.85,color:'#a6e5ec',score:4},
+ vampire:{name:'Deckenvampir',hp:5,range:30,speed:1.2,scale:.85,color:'#be8ca5',score:6},
+ polar:{name:'Eisbär',hp:9,range:65,speed:.9,scale:1.3,color:'#e0f7fa',score:8},
+ monkey:{name:'Bananen-Affe',hp:4,range:100,speed:2.2,scale:.83,color:'#bc9b66',score:5},
+ piranha:{name:'Piranha',hp:3,range:50,speed:2.7,scale:.75,color:'#f0aa71',score:4},
+ racer:{name:'Turbo-Rivale',hp:8,range:12,speed:3.8,scale:.9,color:'#c6adf0',score:7},
+ ufo:{name:'UFO-Pilot',hp:7,range:125,speed:1.3,scale:.9,color:'#c3e8d7',score:8},
+ deepfish:{name:'Tiefsee-Raubfisch',hp:5,range:85,speed:1.8,scale:.95,color:'#7dbec7',score:6},
+ goat:{name:'Steinbock',hp:6,range:85,speed:1.4,scale:1,color:'#c4b0a0',score:7},
+ eagle:{name:'Felsenadler',hp:4,range:130,speed:2.3,scale:.85,color:'#ccb99c',score:5}
+};
+Object.assign(ENEMY_TYPES,BIOME_ENEMY_TYPES);
 const ROUTE_ENEMIES={
  bird:{name:'Wolkenkrähe',hp:3,color:'#83c7e7',speed:1.6,scale:.7,range:82,score:4},
  worm:{name:'Riesenregenwurm',hp:7,color:'#d7939e',speed:.75,scale:1.05,range:47,score:6},
@@ -635,8 +648,63 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  }
 const guestName=FRIEND_SCHEDULE[i]||'Pip',friendId='friend-'+i+'-'+guestName;
  const visitor={id:friendId,name:guestName,x:Math.round(d.width*(i%3===0?.31:i%3===1?.40:.48)),y:390,status:save.friendEncounters.includes(friendId)?'departed':'waiting',injury:INJURY_LEVELS[i]===guestName};
+ 
+ const biome=d.biome,events=[],biomeEnemies=[];
+ const pushEvent=(kind,x,y=400,extra={})=>events.push({kind,x,y,phase:campaignVar(i*213+events.length)*6.3,timer:0,state:'idle',...extra});
+ const pushEnemy=(kind,x,y=400)=>{const e=makeEnemy(x,500+i*23+biomeEnemies.length,kind);e.y=y;e.baseY=y;e.route='biome';e.range=ENEMY_TYPES[kind].range*.7;biomeEnemies.push(e)};
+ const variation=i%3;
+ if(biome==='castle'){
+  for(let j=0;j<5+variation;j++){const x=690+j*560+variation*36;if(x>d.width-280)continue;
+   pushEvent('door',x,450,{opened:false});
+   pushEvent('painting',x+170,270,{fallen:false});
+   if(j%2===0)pushEvent('vampire',x+350,188,{dropped:false});
+   if(j%2===1)pushEvent('ghost',x+245,325,{appeared:false});
+  }
+  for(let x=880;x<d.width-300;x+=750)pushEnemy('ghost',x,345);
+  if(variation===1)pushEvent('dungeon',Math.round(d.width*.42),450);
+ }else if(biome==='snow'){
+  for(let j=0;j<7;j++){const x=640+j*490+variation*18;if(x>d.width-190)continue;
+   pushEvent(j%3===0?'igloo':'thinIce',x,440,{integrity:1,broken:0});
+  }
+  for(let x=940;x<d.width-250;x+=720)pushEnemy('polar',x,400);
+ }else if(biome==='jungle'){
+  for(let j=0;j<7;j++){const x=650+j*480+variation*50;if(x>d.width-200)continue;
+    pushEvent('vine',x,135,{angle:.16,angularVelocity:0,length:245});
+    if(j%2===0)pushEvent('banana',x+210,320,{vx:0,vy:0,active:false});
+  }
+  for(let x=850;x<d.width-200;x+=700)pushEnemy('monkey',x,255);
+  for(let x=1160;x<d.width-200;x+=1120)pushEnemy('piranha',x,565);
+ }else if(biome==='race'){
+  for(let j=0;j<10;j++){const x=470+j*360+variation*35;if(x>d.width-220)continue;
+    pushEvent(j%3===0?'boost':j%3===1?'hurdle':'oil',x,442);
+  }
+  for(let x=900;x<d.width-250;x+=980)pushEnemy('racer',x,400);
+ }else if(biome==='moon'){
+  for(let j=0;j<13;j++){const x=430+j*315+variation*25;if(x>d.width-190)continue;
+    pushEvent(j%3===0?'ufo':'meteor',x,80,{vx:-40-(j%3)*50,vy:0,hit:false});
+  }
+  for(let x=980;x<d.width-240;x+=1060)pushEnemy('ufo',x,150);
+ }else if(biome==='sea'){
+  for(let j=0;j<9;j++){const x=700+j*350+variation*20;if(x>d.width-200)continue;
+    pushEvent(j%3===0?'dome':j%3===1?'coral':'current',x,785);
+  }
+  for(let x=1000;x<d.width-300;x+=710)pushEnemy('deepfish',x,790);
+ }else if(biome==='mountain'){
+  for(let j=0;j<10;j++){const x=570+j*390+variation*20;if(x>d.width-220)continue;
+    pushEvent(j%3===0?'wind':j%3===1?'rock':'avalanche',x,j%3===1?170:440);
+  }
+  for(let x=970;x<d.width-260;x+=860){pushEnemy('goat',x,400);if(x+300<d.width-200)pushEnemy('eagle',x+300,210)}
+ }
+ // Old generic realm switches made every world feel the same. Replace them.
+ challenges.length=0;
+ if(biome==='race'||biome==='moon')tubes.length=0;
+ if(biome==='race'||biome==='moon'||biome==='jungle')routePlatforms.length=0;
+ enemies.push(...biomeEnemies);
+ const realm={id:biome,events,subX:310,subY:810,oxygen:22,cold:8,raceX:80,raceClock:0,raceLost:false,
+             wind:0,vine:null,bananas:[],lastHazard:0,weather:0,finished:false};
+
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,visitor,challenges,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,visitor,challenges,realm,routes,tubes,routePlatforms,routeHazards,mounts,coins:newCoins,houses,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 // Bonus routes, collectible coins and a free once-per-house dice reward.
 function takeCoin(coin){
  if(coin.taken)return;coin.taken=true;const value=COIN_VALUES[coin.type]||1;
