@@ -35,6 +35,8 @@ with sync_playwright() as p:
     page,errors=load(browser)
     assert snapshot(page)['phase']=='menu'
     click(page,0) # new game
+    click(page,0) # Momo cat
+    click(page,1) # medium difficulty
     check(snapshot(page)['phase']=='dialogue','intro not shown')
     check('Momo' in page.locator('.story-title').inner_text(),'intro lacks cat')
     click(page,0) # cake
@@ -55,12 +57,12 @@ with sync_playwright() as p:
     check(boxes[1]['x']+boxes[1]['width']+50<boxes[2]['x'],'left/right group not separated')
     page.wait_for_timeout(400)
     # All twelve chapters, three per world. The seven quest mushrooms are distributed.
-    for i in range(12):
+    for i in range(20):
         check(snapshot(page)['level']==i,f'chapter {i+1} did not begin')
         take_all(page)
         width=snapshot(page)['width']
         check(width>=3000,f'chapter {i+1} must be longer')
-        if i==11:
+        if i==19:
             pos(page,width-410)
             check(snapshot(page)['phase']=='dialogue','final mirror cat missing')
             click(page,0)
@@ -70,7 +72,7 @@ with sync_playwright() as p:
             check(snapshot(page)['phase']=='dialogue','final choice missing')
             click(page,0)
             break
-        if i in (2,5,8):
+        if i in (4,9,14):
             check(snapshot(page)['phase']=='dialogue',f'branching chapter ending missing: {i}')
             click(page,0)
         check(snapshot(page)['level']==i+1,f'next chapter missing after {i}')
@@ -84,11 +86,11 @@ with sync_playwright() as p:
     check('"version":1' in page.evaluate('localStorage.getItem("katzigami-v1")'),'save not stored')
     page.screenshot(path=str(ROOT/'tests'/'true-ending.png'))
     check(not errors,f'JS errors in true ending route: {errors}')
-    print('PASS – 12 long levels, all seven quest mushrooms, true ending and chapter decisions')
+    print('PASS – 20 long levels, all seven quest mushrooms, true ending and chapter decisions')
     page.close()
     # Alternate route: reject the friends, then fight the high-health mirror boss.
     page,errors=load(browser)
-    click(page,0);click(page,1)
+    click(page,0);click(page,0);click(page,1);click(page,1)
     for i in range(12):
         width=snapshot(page)['width']
         if i==11:
@@ -112,7 +114,7 @@ with sync_playwright() as p:
         if snapshot(page)['phase']=='dialogue':click(page,0)
     check(snapshot(page)['ending']=='MOND-ENDE','alternate ending not saved')
     check(not errors,f'JS errors on alternate route: {errors}')
-    print('PASS – alternative choices across twelve levels; repeated-hit boss and moon ending')
+    print('PASS – alternative choices across twenty levels; repeated-hit boss and moon ending')
     page.close()
     # Portrait and large desktop layout tests.
     for w,h in [(390,844),(360,740),(1440,900)]:
