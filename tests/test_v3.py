@@ -62,7 +62,7 @@ with sync_playwright() as p:
  assert snapshot()['effects']['slow']>0 and snapshot()['effects']['sway']>0
  page.evaluate(f'{api}.step(9)')
  assert 'slow' not in snapshot()['effects'] and 'sway' not in snapshot()['effects'],(snapshot()['phase'],snapshot()['effects'])
- page.evaluate(f'{api}.position(930,250)')
+ page.evaluate(f'{api}.position(505,250)')
  page.evaluate(f'{api}.giveCharm("fly")')
  page.keyboard.down('Space')
  before=snapshot()['player']['y']
