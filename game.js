@@ -603,7 +603,7 @@ function jump(){if(phase!=='playing')return;queuedJump=.16}
 function mountPosition(m,t){
  const span=Math.max(230,m.to-m.from);
  if(m.kind==='bird'){
-   const u=(t*.16+m.phase)%1;
+   const u=(t*.04+m.phase)%1;
    const ping=u<.5?u*2:(1-u)*2;
    m.x=clamp(m.from+span*ping+(m.steerOffset||0),m.from,m.to);
    m.y=-583+Math.sin(t*3.5+m.phase)*17;
