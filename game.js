@@ -27,7 +27,19 @@ const ENEMY_TYPES={
  jumper:{name:'Hüpf-Luchs',hp:2,range:74,speed:1.85,scale:.72,color:'#f7b4a9',score:2},
  armored:{name:'Panzerkater',hp:4,range:34,speed:.88,scale:.82,color:'#a3b8d4',score:3},
  witch:{name:'Nebelhexenkatze',hp:3,range:66,speed:1.2,scale:.75,color:'#b9a1e1',score:4},
- titan:{name:'Titanmieze',hp:8,range:22,speed:.65,scale:1.12,color:'#df9baa',score:5}
+ titan:{name:'Titanmieze',hp:8,range:22,speed:.65,scale:1.12,color:'#df9baa',score:5},
+ ninja:{name:'Ninjakatze',hp:3,range:110,speed:3.3,scale:.7,color:'#e5a2cd',score:4},
+ phantom:{name:'Geisterpfote',hp:4,range:115,speed:1.7,scale:.67,color:'#95d8fa',score:4},
+ archer:{name:'Bogenmieze',hp:5,range:65,speed:1.1,scale:.76,color:'#ffc287',score:5},
+ guardian:{name:'Wächterkater',hp:10,range:44,speed:.7,scale:1.02,color:'#b6caaa',score:7}
+};
+const CHARMS={
+ speed:{name:'Turbo-Fisch',icon:'🐟',color:'#ffe46c',seconds:9,bad:false,info:'Rennboost!'},
+ invincible:{name:'Sternen-Schutz',icon:'⭐',color:'#ffdd82',seconds:6,bad:false,info:'Kurz unverwundbar!'},
+ fly:{name:'Flugfeder',icon:'🪽',color:'#9feef4',seconds:8,bad:false,info:'Springen halten = fliegen!'},
+ sway:{name:'Schwindelpilz',icon:'🌀',color:'#cf9aff',seconds:7,bad:true,info:'Hui! Die Welt schwankt!'},
+ slow:{name:'Schneckenschleim',icon:'🐌',color:'#a4a2da',seconds:8,bad:true,info:'Oh nein, Schneckentempo!'},
+ silence:{name:'Magie-Siegel',icon:'🔒',color:'#ed91ba',seconds:7,bad:true,info:'Spezialfähigkeit blockiert!'}
 };
 const ENEMY_MAP=[
  ['scout','jumper','armored','scout','jumper','armored'],
@@ -86,11 +98,11 @@ const campaignVar=(salt)=>seeded(save.seed||1,salt);
 const personality=(index)=>CAT_PERSONALITIES[Math.floor(campaignVar(index+101)*CAT_PERSONALITIES.length)];
 const defaultSave=()=>({version:1,campaignV3:true,seed:campaignSeed(),level:0,collected:[],hearts:3,checkpoint:0,flags:{},shown:[],won:false,ending:'',deaths:0,mute:false,power:null,relations:{},answers:[],encounters:0});
 function loadSave(){try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!raw||raw.version!==1||!Array.isArray(raw.collected)||!Number.isInteger(raw.level))return defaultSave();return {...defaultSave(),...raw,flags:raw.flags&&typeof raw.flags==='object'?raw.flags:{},collected:raw.collected.filter(x=>Object.hasOwn(MUSHROOMS,x)),shown:Array.isArray(raw.shown)?raw.shown:[],level:Math.max(0,Math.min(CHAPTERS.length-1,raw.campaignV3?raw.level:raw.level*3)),campaignV3:true,hearts:Math.max(1,Math.min(3,Number(raw.hearts)||3)),power:Object.hasOwn(POWERS,raw.power)?raw.power:null,seed:Number.isInteger(raw.seed)?raw.seed:campaignSeed(),relations:raw.relations&&typeof raw.relations==='object'?raw.relations:{},answers:Array.isArray(raw.answers)?raw.answers.slice(-16):[],encounters:Number(raw.encounters)||0}}catch{return defaultSave()}}
-let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0;
+let save=loadSave(),level=null,player=null,phase='menu',vxInput={left:false,right:false,jump:false},clock=0,viewW=960,cam=0,toastUntil=0,lastFrame=0,ambience=0,boss=null,queuedJump=0,coyote=0,audioCtx=null,audioMuted=!!save.mute,musicAt=0,musicStep=0,particles=[],shots=[],enemyShots=[],specialCooldown=0,powerFlash=0,effects={};
 const rand=(x)=>{let v=Math.sin(x*127.1+18.27)*43758.5453;return v-Math.floor(v)};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch{/* localStorage may be disabled; current session still works */}}
-function updateUI(){const ability=$('special'),power=save.power&&POWERS[save.power];ability.disabled=!power;ability.classList.toggle('unlocked',!!power);ability.setAttribute('aria-label',power?'Spezialfähigkeit '+power.name+' einsetzen':'Spezialfähigkeit gesperrt – zuerst Verwandlungspilz einsammeln');ability.title=power?'Stufe '+power.rank+' – '+power.attack+': '+power.hint:'Zuerst Verwandlungspilz sammeln';$('special-icon').textContent=power?power.symbol:'🔒';$('special-label').textContent=power?'STUFE '+power.rank:'GESPERRT';ability.style.setProperty('--power-color',power?power.color:'#c6b6c8');heartsUI.textContent='♥ '.repeat(save.hearts).trim()+' ♡'.repeat(3-save.hearts);mushroomsUI.textContent='🍄 '+save.collected.length+'/'+TOTAL;levelUI.textContent=(save.level+1)+' / '+CHAPTERS.length;chapterUI.textContent=CHAPTERS[save.level].name.toUpperCase();$('sound-toggle').textContent=audioMuted?'♩':'♫';$('sound-toggle').setAttribute('aria-label',audioMuted?'Ton einschalten':'Ton ausschalten')}
+function updateUI(){const ability=$('special'),power=save.power&&POWERS[save.power];ability.disabled=!power||!!effects.silence;ability.classList.toggle('unlocked',!!power&&!effects.silence);ability.setAttribute('aria-label',power?'Spezialfähigkeit '+power.name+' einsetzen':'Spezialfähigkeit gesperrt – zuerst Verwandlungspilz einsammeln');ability.title=effects.silence?'Magie für '+effects.silence.toFixed(1)+' Sekunden gesperrt':power?'Stufe '+power.rank+' – '+power.attack+': '+power.hint:'Zuerst Verwandlungspilz sammeln';$('special-icon').textContent=power?power.symbol:'🔒';$('special-label').textContent=effects.silence?'FLUCH':power?'STUFE '+power.rank:'GESPERRT';ability.style.setProperty('--power-color',power?power.color:'#c6b6c8');heartsUI.textContent='♥ '.repeat(save.hearts).trim()+' ♡'.repeat(3-save.hearts);mushroomsUI.textContent='🍄 '+save.collected.length+'/'+TOTAL;levelUI.textContent=(save.level+1)+' / '+CHAPTERS.length;chapterUI.textContent=CHAPTERS[save.level].name.toUpperCase();$('sound-toggle').textContent=audioMuted?'♩':'♫';$('sound-toggle').setAttribute('aria-label',audioMuted?'Ton einschalten':'Ton ausschalten')}
 function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);if(r.width<1||r.height<1)return;viewW=HEIGHT*r.width/r.height;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(canvas.width/viewW,0,0,canvas.height/HEIGHT,0,0);ctx.imageSmoothingEnabled=true;if(level)cam=clamp(cam,0,Math.max(0,level.width-viewW))}
 function tone(freq,when,duration,wave='sine',volume=.11,endFreq){if(audioMuted)return;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=wave;o.frequency.setValueAtTime(Math.max(60,freq),when);if(endFreq)o.frequency.exponentialRampToValueAtTime(Math.max(60,endFreq),when+duration);g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(volume,when+.015);g.gain.exponentialRampToValueAtTime(.0001,when+duration);o.connect(g).connect(audioCtx.destination);o.start(when);o.stop(when+duration+.012)}catch{/* Audio unavailable */}}
 function sound(kind){if(audioMuted)return;let now;try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();now=audioCtx.currentTime}catch{return}
@@ -211,9 +223,10 @@ function menu(){phase='menu';updateUI();presentCard('EIN HANDGEMACHTES KATZENABE
 }
 function help(){dialog({tag:'SPIELANLEITUNG',title:'Mit zwei Daumen ins Abenteuer!',portrait:'⬅️ 🐱 ➡️ ⬆️',body:'Links: laufen. Rechts: springen (gedrückt halten = höher!). Die NEUE Magietaste daneben wird ERST nach einem besonderen Verwandlungspilz aktiv; damit wirfst du Zauberkugeln. Jeder Verwandlungspilz bringt eine höhere Stufe: Blütenwurf, Kettenblitz, Mondexplosion und Sternensturm. Upgrades bleiben auch nach Treffern erhalten. Sammle sieben Orakelpilze, springe auf freche Schattenkatzen und erreiche die glitzernde Tür. Jedes neue Abenteuer hat ein neues Katzigmysterium und zufällige Gegner. Bei Katzenbegegnungen kannst du eigene Antworten eintippen, die Beziehungen, Abkürzungen und Gegner beeinflussen. Das läuft offline mit Spielregeln, nicht über eine Sprachmodell-KI. Spielstände werden automatisch auf diesem Gerät gespeichert. Auf PC: A/D oder Pfeiltasten, Leertaste zum Springen.',options:[{label:'Miau, verstanden! 🐾',action:()=>phase==='dialogue'&&menu()}]})}
 function markShown(key){if(!save.shown.includes(key)){save.shown.push(key);persist();return false}return true}
-function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=Math.max(1,save.hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];specialCooldown=0;powerFlash=0;resetMusic();cam=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
+function enterLevel(i,withIntro=false){const restoring=withIntro&&i===save.level&&!save.won&&save.checkpoint>0;const spawnX=restoring?save.checkpoint:78;save.level=i;if(!restoring)save.checkpoint=0;save.hearts=Math.max(1,save.hearts);level=makeLevel(i);boss={triggered:false,active:false,done:false,hp:12,maxHp:12,x:level.width-315,y:402,inv:0};player={x:spawnX,y:330,w:43,h:60,vx:0,vy:0,grounded:false,facing:1,inv:1,landed:false,runCycle:0};shots=[];enemyShots=[];particles=[];effects={};specialCooldown=0;powerFlash=0;resetMusic();cam=0;coyote=0;clearInputs();persist();updateUI();hideOverlay();phase='playing';if(withIntro&&!markShown('start'+i))startDialog(i);else enterDynamicEncounters()}
 function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;for(const [from,to] of d.gaps){ground.push({x:previous,y:450,w:from-previous,h:100,ground:true});previous=to}ground.push({x:previous,y:450,w:d.width-previous,h:100,ground:true});const platforms=d.platforms.map(([x,y,w])=>({x,y,w,h:24,ground:false}));const positions=[...d.enemies,...EXTRA_ENEMY_SPAWNS[act]];
  const makeEnemy=(x,j,type)=>{const t=ENEMY_TYPES[type];return {id:'e'+j,type,name:t.name,base:x,x,y:411,baseY:411,hp:t.hp,maxHp:t.hp,dead:false,seed:j+i*11,range:t.range,inv:0,attackTimer:1.8+rand(j*13+i)*2}};
+ for(let x=d.width-680;x>d.width-2100&&x>650;x-=420){if(!d.gaps.some(([a,b])=>x>a-65&&x<b+55))positions.push(x)}
  let enemies=positions.map((x,j)=>makeEnemy(x,j,j===0?'scout':ENEMY_MAP[act][(j+Math.floor(campaignVar(i*100+j)*ENEMY_MAP[act].length))%ENEMY_MAP[act].length]));
  // Each new adventure has distinct patrols, without moving mandatory collectibles.
  for(let j=0;j<5+Math.ceil(i/2);j++){const x=Math.round(550+campaignVar(i*32+j*13)*Math.max(200,d.width-1050));if(d.gaps.some(([a,b])=>x>a-60&&x<b+60))continue;const options=act===0?['scout','jumper','ninja']:act<3?['jumper','armored','witch','phantom','archer']:['armored','witch','titan','phantom','ninja','archer','guardian'];enemies.push(makeEnemy(x,30+j,options[Math.floor(campaignVar(500+i*20+j)*options.length)]))}
@@ -223,8 +236,17 @@ function makeLevel(i){const d=CHAPTERS[i],act=actOf(i);let ground=[],previous=0;
  if(act===3&&save.flags.readLetter)enemies=enemies.filter(e=>e.type!=='titan'||e.base>2000);
  if(act===1&&save.flags.helpedMiso)platforms.push({x:1135,y:350,w:245,h:24,ground:false,helper:true});
  if(act===2&&save.flags.trustedQueen)platforms.push({x:1720,y:345,w:300,h:24,ground:false,helper:true});
+ const charms=[];
+ const keys=Object.keys(CHARMS);
+ for(let j=0;j<8+Math.floor(i/3);j++){
+  let x=Math.round(490+(j+1)*(d.width-880)/(9+Math.floor(i/3))+campaignVar(i*303+j)*90);
+  if(d.gaps.some(([a,b])=>x>a-80&&x<b+75))x+=190;
+  x=Math.min(d.width-250,x);
+  const kind=keys[(j+Math.floor(campaignVar(i*503+j)*keys.length))%keys.length];
+  charms.push({id:'charm'+i+'-'+j,kind,x,y:400,taken:false});
+ }
  const brightness=campaignVar(i*43+2),toneVariant=brightness<.33?'Dämmerung':brightness>.7?'Morgentau':'Sternenschein';
- return {...d,index:i,toneVariant,ground,platforms,enemies,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},checkpoints:d.checkpoint};}
+ return {...d,index:i,toneVariant,ground,platforms,enemies,items:d.mushrooms.map(([id,x,y])=>({id,x,y,taken:save.collected.includes(id)})),powerItem:{id:d.power[0],x:d.power[1],y:d.power[2],taken:false},charms,checkpoints:d.checkpoint};}
 function startDialog(i){if(i===0){dialog({tag:'PROLOG · DIE VERLORENEN FARBEN',title:'Momo und das Pilzorakel',portrait:'🐱 🍄 🌸',body:'»MIAU?!« Alle Blumen werden blass! '+mystery().clue+' Pilzbote Pip verdächtigt Königin Dahlia. Sammle die sieben Orakelpilze und finde heraus, wer hier eigentlich Quatsch erzählt.',options:[{label:'🍰 Erst Kuchen, dann Weltrettung!',action:()=>{save.flags.cake=true;persist();resume();toast('Momo: »Ich rette niemals nüchtern … äh, hungrig!«')}},{label:'⚔️ Ich bin die auserwählte Samtpfote!',action:()=>{save.flags.hero=true;persist();resume();toast('Momo: »Schicksal, zieh dich warm an!«')}}]});return}
  const details=[null,{title:'Ein Wald voller Gerüchte',portrait:'🐈 🌳 🐈',body:save.flags.helpedMiso?'Miso wurde gerettet und begleitet dich. Sie kennt geheime Pilzpfade!':'Miso ist beleidigt und hat die Brücke mitgenommen. Jetzt warten zusätzliche Schattenkatzen. Autsch.',line:'Die Wahrheit raschelt zwischen den Blättern.'},{title:'Die Königin in Grau',portrait:'👑 🐈 🌙',body:save.flags.trustedQueen?'Dahlia dankt für dein Vertrauen: Ein sicherer Mondsteg erscheint.':'Du glaubst Pip. Doch die Wolkenkatzen sehen plötzlich erstaunlich bissig aus.'},{title:'Der Garten außerhalb der Zeit',portrait:'⏳ 🐱 🌼',body:save.flags.readLetter?'Der Brief verrät, wie das Spiegelkätzchen entstand. Du kannst mit ihm reden.':'Du hast den Brief verworfen. Vielleicht kann ein Pilz das Spiegelkätzchen trotzdem besänftigen.'}];const v=details[actOf(i)];dialog({tag:CHAPTERS[i].subtitle,title:v.title,portrait:v.portrait,body:v.body+' '+mystery().clue,options:[{label:'🐾 Weiter in den Blumenwahnsinn!',action:resume}]});}
 function resume(){hideOverlay();phase='playing';enterDynamicEncounters();clearInputs();lastFrame=performance.now();musicAt=0}
@@ -269,6 +291,13 @@ function ending(choice){save.flags.finalChoice=choice;save.won=true;let type,tit
  const epilogue=bonds>=3?' Deine befreundeten Katzen organisieren ein prachtvolles Fest.':bonds<=-2?' Einige misstrauische Katzen bleiben als schwierige Rivalen zurück.':' Die anderen Katzen versprechen, noch viele Fragen zu stellen.';
  body+=' '+mystery().ending+epilogue;
  save.ending=type;persist();sound('win');phase='ending';presentCard(`🏆 ${type}`,title,'🐈 🌈 🍄',body,[{label:'🐾 Die Pilze noch einmal suchen',action:()=>{save.won=false;save.level=0;save.checkpoint=0;persist();enterLevel(0)}},{label:'🏠 Hauptmenü',secondary:true,action:menu}])}
+function takeCharm(item){
+ if(item.taken)return;
+ item.taken=true;const p=CHARMS[item.kind];effects[item.kind]=p.seconds;
+ burst(item.x,item.y,p.color,24);sound(p.bad?'hurt':'transform');toast((p.bad?'☠️ FLUCH: ':'✨ BONUS: ')+p.name+' · '+p.info+' ('+p.seconds+'s)');
+ if(p.bad&&navigator.vibrate)navigator.vibrate([45,60,45]);
+ updateUI();
+}
 function transform(item){
  if(item.taken)return;
  item.taken=true;
@@ -284,7 +313,7 @@ function transform(item){
  persist();updateUI();if(navigator.vibrate)navigator.vibrate([35,40,45]);
 }
 function castSpecial(){
- if(phase!=='playing'||!save.power||!player||specialCooldown>0)return false;
+ if(phase!=='playing'||!save.power||!player||specialCooldown>0||effects.silence>0)return false;
  const p=POWERS[save.power],x=player.x+player.w/2+player.facing*29,y=player.y+22;
  const basic={x,y,vx:player.facing*560,vy:0,life:1.5,kind:save.power,color:p.color,damage:p.damage,hit:[],pierce:1,radius:14};
  if(p.rank===1)shots.push(basic);
@@ -309,11 +338,15 @@ function hitBoss(damage,x,y){
  return true;
 }
 function collect(item){if(item.taken)return;item.taken=true;if(!save.collected.includes(item.id))save.collected.push(item.id);persist();updateUI();sound('pick');if(navigator.vibrate)navigator.vibrate(20);toast(`🍄 ${MUSHROOMS[item.id].name}! ${MUSHROOMS[item.id].hint}`)}
-function hurt(){if(player.inv>0||phase!=='playing')return;player.inv=1.5;if(save.power){burst(player.x+20,player.y+10,POWERS[save.power].color,14)}save.hearts=Math.max(0,save.hearts-1);sound('hurt');updateUI();player.vy=-440;player.vx=-player.facing*240;toast('Autsch! Die Schattenkatze ruft: »Miau-ha-ha!«');if(save.hearts<=0){save.deaths++;save.hearts=3;const newX=save.checkpoint||78;player.x=newX;player.y=320;player.vy=0;player.inv=2;updateUI();toast('Neun Leben? Praktisch unbegrenzt! 🐾')}persist()}
+function hurt(){if(player.inv>0||effects.invincible>0||phase!=='playing')return;player.inv=1.5;if(save.power){burst(player.x+20,player.y+10,POWERS[save.power].color,14)}save.hearts=Math.max(0,save.hearts-1);sound('hurt');updateUI();player.vy=-440;player.vx=-player.facing*240;toast('Autsch! Die Schattenkatze ruft: »Miau-ha-ha!«');if(save.hearts<=0){save.deaths++;save.hearts=3;const newX=save.checkpoint||78;player.x=newX;player.y=320;player.vy=0;player.inv=2;updateUI();toast('Neun Leben? Praktisch unbegrenzt! 🐾')}persist()}
 function jump(){if(phase!=='playing')return;queuedJump=.16}
 function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
+ const blocked=effects.silence>0;
+ for(const key of Object.keys(effects)){effects[key]=Math.max(0,effects[key]-dt);if(!effects[key])delete effects[key]}
+ if(blocked!==!!effects.silence)updateUI();
  player.inv=Math.max(0,player.inv-dt);boss.inv=Math.max(0,boss.inv-dt);powerFlash=Math.max(0,powerFlash-dt);specialCooldown=Math.max(0,specialCooldown-dt);coyote=Math.max(0,coyote-dt);queuedJump=Math.max(0,queuedJump-dt);
- const target=(Number(vxInput.right)-Number(vxInput.left))*330;
+ const speedFactor=(effects.speed>0?1.65:1)*(effects.slow>0?.52:1);
+ const target=(Number(vxInput.right)-Number(vxInput.left))*330*speedFactor;
  const acceleration=player.grounded?2350:1470;
  player.vx+=(target-player.vx)*Math.min(1,dt* (acceleration/330));if(Math.abs(target)<1&&Math.abs(player.vx)<4)player.vx=0;
  if(target)player.facing=target>0?1:-1;
@@ -321,6 +354,8 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  if(!vxInput.jump&&player.vy<-280)player.vy+=1850*dt;
  const previousBottom=player.y+player.h;
  player.vy=Math.min(1100,player.vy+1780*dt);
+ if(effects.fly>0&&vxInput.jump){player.vy=-280;player.grounded=false;coyote=0;queuedJump=0}
+ if(effects.fly>0)player.y=Math.max(48,player.y);
  player.x=clamp(player.x+player.vx*dt,0,level.width-player.w);if(player.grounded&&Math.abs(player.vx)>14)player.runCycle+=Math.abs(player.vx)*dt*.073;
  player.y+=player.vy*dt;let landing=null;
  if(player.vy>=0){for(const platform of [...level.ground,...level.platforms]){
@@ -335,6 +370,7 @@ function simulate(dt){clock+=dt;if(phase!=='playing'||!player||!level)return;
  }
  for(const [k,cp] of level.checkpoints.entries()){if(player.x>cp&&save.checkpoint<cp){save.checkpoint=cp;persist();toast(k===0?'✿ Schnurrpunkt erreicht!':'✿ Letzter Schnurrpunkt erreicht!');sound('choice')}}
  for(const item of level.items){if(item.taken)continue;if(Math.abs(player.x+player.w/2-item.x)<37&&Math.abs(player.y+player.h/2-item.y)<49)collect(item)}
+ for(const item of level.charms){if(!item.taken&&Math.abs(player.x+player.w/2-item.x)<36&&Math.abs(player.y+player.h/2-item.y)<51)takeCharm(item)}
  const powerItem=level.powerItem;if(!powerItem.taken&&Math.abs(player.x+player.w/2-powerItem.x)<38&&Math.abs(player.y+player.h/2-powerItem.y)<51)transform(powerItem);
  for(const shot of shots){
   if(shot.homing){let target=null,distance=450;for(const e of level.enemies){if(e.dead||shot.hit.includes(e.id))continue;const d=Math.hypot(e.x-shot.x,e.y-shot.y);if(d<distance){distance=d;target={x:e.x+18,y:e.y+20}}}if(!target&&boss.active&&!boss.done)target={x:boss.x+Math.sin(clock*1.3)*60+15,y:boss.y+22};if(target){const desired=Math.atan2(target.y-shot.y,target.x-shot.x),current=Math.atan2(shot.vy,shot.vx);const delta=Math.atan2(Math.sin(desired-current),Math.cos(desired-current)),a=current+clamp(delta,-dt*5.2,dt*5.2),v=610;shot.vx=Math.cos(a)*v;shot.vy=Math.sin(a)*v}}
@@ -459,7 +495,7 @@ function bindControl(id,key){const el=$(id),pointers=new Set();const release=e=>
  for(const event of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(event,release);
  window.addEventListener('blur',()=>{pointers.clear();vxInput[key]=false;el.classList.remove('pressed')});}
 function setup(){bindControl('left','left');bindControl('right','right');bindControl('jump','jump');
- const special=$('special');special.addEventListener('pointerdown',e=>{e.preventDefault();if(phase!=='playing'||!save.power)return;try{special.setPointerCapture(e.pointerId)}catch{}special.classList.add('pressed');castSpecial()});for(const ev of ['pointerup','pointercancel','lostpointercapture'])special.addEventListener(ev,()=>special.classList.remove('pressed'));window.addEventListener('blur',()=>special.classList.remove('pressed'));
+ const special=$('special');special.addEventListener('pointerdown',e=>{e.preventDefault();if(phase!=='playing'||!save.power||effects.silence>0)return;try{special.setPointerCapture(e.pointerId)}catch{}special.classList.add('pressed');castSpecial()});for(const ev of ['pointerup','pointercancel','lostpointercapture'])special.addEventListener(ev,()=>special.classList.remove('pressed'));window.addEventListener('blur',()=>special.classList.remove('pressed'));
  const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',KeyX:'special',KeyJ:'special'};
  window.addEventListener('keydown',e=>{if(e.target instanceof HTMLElement&&e.target.closest('textarea,input'))return;if(keyMap[e.code]){e.preventDefault();if(phase==='playing'){if(keyMap[e.code]==='special'){if(!e.repeat)castSpecial()}else{if(!vxInput[keyMap[e.code]]&&keyMap[e.code]==='jump')jump();vxInput[keyMap[e.code]]=true}}}if(e.code==='Escape'){e.preventDefault();pause()}if(e.code==='Enter'&&phase==='dialogue'){const b=overlayContent.querySelector('button');if(b)b.click()}});
  window.addEventListener('keyup',e=>{if(keyMap[e.code]){e.preventDefault();vxInput[keyMap[e.code]]=false}});
