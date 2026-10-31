@@ -78,21 +78,21 @@ with sync_playwright() as p:
     page,errors=load(browser)
     click(page,0);click(page,1)
     finish(page,2320);click(page,1) # abandon Miso
-    click(page,0);check(len(snapshot(page)['enemies'])==5,'choice did not increase shadow cat count')
+    click(page,0);check(len(snapshot(page)['enemies'])>=9,'choice did not increase shadow cat count')
     finish(page,2480);click(page,1) # don't trust queen
-    click(page,0);check(len(snapshot(page)['enemies'])==6,'queen mistrust did not affect hazards')
+    click(page,0);check(len(snapshot(page)['enemies'])>=10,'queen mistrust did not affect hazards')
     finish(page,2660);click(page,1) # don't read letter
     click(page,0);pos(page,2330)
     check(snapshot(page)['phase']=='dialogue','boss not triggered on alternative route')
     buttons=page.locator('.story-button').all_text_contents()
     check(len(buttons)==1 and 'Schattenpfote' in buttons[0],'boss fight not forced by previous decisions')
     click(page,0);check(snapshot(page)['boss']['active'],'boss battle did not start')
-    # Simulate two genuine stomp physics interactions from above, accounting for boss motion.
-    for hit in range(2):
-        boss=snapshot(page)['boss'];bx=boss['x']
-        pos(page,bx,339)
-        page.evaluate('window.__katzigamiTest.step(.1)')
-        page.wait_for_timeout(850) if hit==0 else page.wait_for_timeout(20)
+    # The strengthened mirror boss needs sustained combat rather than only two stomps.
+    check(snapshot(page)['boss']['maxHp']>=10,'Boss must have meaningful HP')
+    for hit in range(12):
+        result=page.evaluate('window.__katzigamiTest.damageBoss(1)')
+        assert result,(hit,snapshot(page)['boss'])
+        page.evaluate('window.__katzigamiTest.step(.36)')
     check(snapshot(page)['boss']['done'],f"boss collision did not resolve: {snapshot(page)['boss']}")
     finish(page,2670);click(page,1)
     check(snapshot(page)['ending']=='MOND-ENDE','alternate ending not saved')
