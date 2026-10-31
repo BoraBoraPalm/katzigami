@@ -73,7 +73,7 @@ with sync_playwright() as P:
  page,errors=launch(browser)
  click(page,0);click(page,0)
  for i,power in enumerate(('blossom','spark','moon','starlight')):
-  page.evaluate('(i)=>window.__katzigamiTest.enterLevel(i)',i)
+  page.evaluate('(i)=>window.__katzigamiTest.enterLevel(i*3)',i)
   page.evaluate('window.__katzigamiTest.takePower()')
   assert snap(page)['power']==power,(i,snap(page)['power'])
   assert not page.locator('#special').is_disabled()
