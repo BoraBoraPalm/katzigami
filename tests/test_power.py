@@ -51,9 +51,9 @@ with sync_playwright() as P:
  assert snap(page)['shots']>0,'Special touch did not create projectile'
  page.locator('#special').dispatch_event('pointerup',{'pointerId':20,'pointerType':'touch','button':0})
  page.evaluate('window.__katzigamiTest.hurt()')
- assert snap(page)['power'] is None and page.locator('#special').is_disabled(),'Damage must lock ability again'
- assert not page.evaluate('window.__katzigamiTest.cast()'),'Casting possible after losing transformation'
- assert snap(page)['hearts']==3,'First hit should lose transformation rather than hearts'
+ assert snap(page)['power']=='blossom' and not page.locator('#special').is_disabled(),'Upgrades must remain permanently unlocked after damage'
+ page.evaluate('window.__katzigamiTest.step(.5)'); assert page.evaluate('window.__katzigamiTest.cast()'),'Casting should remain unlocked after hit'
+ assert snap(page)['hearts']==2,'Taking damage should cost a heart while retaining power'
 
  # A real projectile must eliminate a shadow-cat on collision (not just animate).
  page.evaluate('window.__katzigamiTest.enterLevel(0)')
@@ -65,7 +65,7 @@ with sync_playwright() as P:
  assert snap(page)['enemies'][0]['dead'], 'Magic projectile did not hit nearby shadow-cat'
  print('PASS: magical projectile physically defeats a cat enemy')
  assert not errors,errors
- print('PASS: seven quest mushrooms do NOT unlock; transforming mushroom unlocks; touch cast fires; damage removes form and re-locks ability without losing heart')
+ print('PASS: seven quest mushrooms do NOT unlock; transforming mushroom unlocks; touch cast fires; damage keeps permanent upgrades but costs a heart')
  page.close()
  page,errors=launch(browser)
  click(page,0);click(page,0)
