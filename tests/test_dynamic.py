@@ -7,7 +7,7 @@ css=(root/'style.css').read_text().split("\n",1)[1]
 js=(root/'game.js').read_text().replace("new URLSearchParams(location.search).has('test')","true")
 html=html.replace('</head>','<style>'+css+'</style></head>').replace('</body>','<script>'+js+'</script></body>')
 with sync_playwright() as p:
- b=p.chromium.launch(headless=True, executable_path='/usr/bin/chromium',args=['--no-sandbox','--disable-dev-shm-usage'])
+ b=p.chromium.launch(headless=True, executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox','--disable-dev-shm-usage'])
  page=b.new_page(viewport={'width':844,'height':390})
  errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(html)
