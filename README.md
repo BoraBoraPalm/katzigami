@@ -59,6 +59,8 @@ Jeder besondere Verwandlungspilz macht deinen Helden stärker und verändert Aus
 
 **⌨️ PC:** A/D oder ←/→ · Leertaste zum Springen · X/J für Spezialattacken.
 
+**💬 Lebendige Dialoge:** Über 100 unterschiedliche Begegnungen, viele Prologe und passende Antworten. Jede Szene erscheint pro Abenteuer nur einmal, auch beim Fortsetzen.
+
 **🤝 Wiederkehrende Freunde** begleiten dich ein Stück, enthüllen Geheimnisse, verschwinden und kehren später zurück. Verletzte Freunde kannst du für **150 Münzen** heilen – oder zurücklassen.
 
 **💾 Autosave + bis zu acht benannte Speicherplätze** mit frei wählbarem Titel, Laden und Löschen – lokal im Browser.
